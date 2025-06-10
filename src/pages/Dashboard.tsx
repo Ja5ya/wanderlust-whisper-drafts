@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Mail, Users, Calendar, Route, Settings } from "lucide-react";
+import { Mail, Users, Calendar, Route, Settings, AlertCircle, CheckCircle, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import EmailInbox from "@/components/EmailInbox";
 import CustomerList from "@/components/CustomerList";
 import AITrainingSettings from "@/components/AITrainingSettings";
+import BusinessAnalytics from "@/components/BusinessAnalytics";
 
 const Dashboard = () => {
   const [isTrainingSettingsOpen, setIsTrainingSettingsOpen] = useState(false);
@@ -61,49 +62,49 @@ const Dashboard = () => {
           <p className="text-gray-600">Manage your customer service operations efficiently</p>
         </div>
 
-        {/* Stats Cards */}
+        {/* Action Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={switchToEmailInbox}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Emails</CardTitle>
+              <CardTitle className="text-sm font-medium">Emails to Read</CardTitle>
               <Mail className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">234</div>
-              <p className="text-xs text-muted-foreground">+12% from last month</p>
+              <div className="text-2xl font-bold">23</div>
+              <p className="text-xs text-muted-foreground">Unread emails</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Customers</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">89</div>
-              <p className="text-xs text-muted-foreground">+5% from last month</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg Response Time</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">12m</div>
-              <p className="text-xs text-muted-foreground">-60% improvement</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Routes Created</CardTitle>
+              <CardTitle className="text-sm font-medium">Routes to Check</CardTitle>
               <Route className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">45</div>
-              <p className="text-xs text-muted-foreground">+28% from last month</p>
+              <div className="text-2xl font-bold">7</div>
+              <p className="text-xs text-muted-foreground">Pending review</p>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Bookings</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">12</div>
+              <p className="text-xs text-muted-foreground">Awaiting confirmation</p>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Customer Issues</CardTitle>
+              <AlertCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">3</div>
+              <p className="text-xs text-muted-foreground">Requires attention</p>
             </CardContent>
           </Card>
         </div>
@@ -115,7 +116,7 @@ const Dashboard = () => {
             <TabsTrigger value="customers">Customers</TabsTrigger>
             <TabsTrigger value="routes">Route Planning</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="legacy-drafting">Legacy Drafting</TabsTrigger>
+            <TabsTrigger value="business-analytics">Business Analytics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="email-inbox">
@@ -168,27 +169,8 @@ const Dashboard = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="legacy-drafting">
-            <Card>
-              <CardHeader>
-                <CardTitle>Legacy Email Drafting</CardTitle>
-                <CardDescription>
-                  The original email drafting interface (deprecated - use Email Inbox instead)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <Mail className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Use Email Inbox Instead</h3>
-                  <p className="text-gray-600 mb-6">
-                    The new Email Inbox provides better integration with Gmail/Outlook and improved AI assistance.
-                  </p>
-                  <Button onClick={switchToEmailInbox}>
-                    Go to Email Inbox
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="business-analytics">
+            <BusinessAnalytics />
           </TabsContent>
         </Tabs>
       </div>

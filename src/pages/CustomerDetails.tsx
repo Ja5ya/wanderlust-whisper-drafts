@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Mail, Calendar, MapPin, Plane, Hotel, FileText } from "lucide-react";
+import { ArrowLeft, Mail, Calendar, MapPin, Plane, Hotel, FileText, Download } from "lucide-react";
 
 const CustomerDetails = () => {
   const [notes, setNotes] = useState("VIP customer. Prefers luxury accommodations. Vegetarian dietary requirements. Celebrating 20th anniversary.");
@@ -97,6 +97,11 @@ const CustomerDetails = () => {
     console.log("Generating voucher...");
   };
 
+  const generateGuideSummary = () => {
+    // This would generate and download a PDF guide summary with all trip details
+    console.log("Generating guide summary...");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
@@ -113,6 +118,10 @@ const CustomerDetails = () => {
             </div>
           </div>
           <div className="flex space-x-4">
+            <Button variant="outline" onClick={generateGuideSummary}>
+              <Download className="h-4 w-4 mr-2" />
+              Generate Guide Summary
+            </Button>
             <Button variant="outline" onClick={generateVoucher}>
               <FileText className="h-4 w-4 mr-2" />
               Generate Voucher
