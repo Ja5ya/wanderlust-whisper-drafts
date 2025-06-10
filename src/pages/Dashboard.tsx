@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,14 @@ import AITrainingSettings from "@/components/AITrainingSettings";
 
 const Dashboard = () => {
   const [isTrainingSettingsOpen, setIsTrainingSettingsOpen] = useState(false);
+
+  const switchToEmailInbox = () => {
+    // Find the email inbox tab trigger and click it
+    const emailInboxTab = document.querySelector('[value="email-inbox"]') as HTMLButtonElement;
+    if (emailInboxTab) {
+      emailInboxTab.click();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -174,7 +183,7 @@ const Dashboard = () => {
                   <p className="text-gray-600 mb-6">
                     The new Email Inbox provides better integration with Gmail/Outlook and improved AI assistance.
                   </p>
-                  <Button onClick={() => document.querySelector('[value="email-inbox"]')?.click()}>
+                  <Button onClick={switchToEmailInbox}>
                     Go to Email Inbox
                   </Button>
                 </div>

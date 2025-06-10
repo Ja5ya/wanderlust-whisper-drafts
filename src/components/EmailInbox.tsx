@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -111,10 +110,14 @@ TravelAssist DMC`;
   const addToFAQ = () => {
     if (!selectedEmail) return;
     
-    toast({
-      title: "Added to Knowledge Base",
-      description: "This email and response have been added to your FAQ knowledge base."
-    });
+    // Open FAQ editor in new tab
+    const newTab = window.open('/faq-editor', '_blank');
+    if (newTab) {
+      toast({
+        title: "Opening FAQ Editor",
+        description: "FAQ editor opened in new tab for review and editing."
+      });
+    }
   };
 
   if (!isConnected) {

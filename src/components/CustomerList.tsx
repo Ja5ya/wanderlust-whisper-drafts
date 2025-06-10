@@ -79,6 +79,10 @@ const CustomerList = () => {
     }
   };
 
+  const openCustomerDetails = (customerId: number) => {
+    window.open('/customer-details', '_blank');
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -147,7 +151,9 @@ const CustomerList = () => {
                           <Mail className="h-3 w-3 mr-1" />
                           Email
                         </Button>
-                        <Button size="sm">View Details</Button>
+                        <Button size="sm" onClick={() => openCustomerDetails(customer.id)}>
+                          View Details
+                        </Button>
                       </div>
                     </div>
                   </div>
