@@ -1,13 +1,17 @@
-
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Mail, Users, Calendar, Route } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Mail, Users, Calendar, Route, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
-import EmailDrafting from "@/components/EmailDrafting";
+import EmailInbox from "@/components/EmailInbox";
 import CustomerList from "@/components/CustomerList";
+import AITrainingSettings from "@/components/AITrainingSettings";
 
 const Dashboard = () => {
+  const [isTrainingSettingsOpen, setIsTrainingSettingsOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
@@ -20,6 +24,20 @@ const Dashboard = () => {
               </Link>
             </div>
             <div className="flex space-x-4">
+              <Dialog open={isTrainingSettingsOpen} onOpenChange={setIsTrainingSettingsOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Settings className="h-4 w-4 mr-2" />
+                    AI Training Settings
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>AI Training Settings</DialogTitle>
+                  </DialogHeader>
+                  <AITrainingSettings />
+                </DialogContent>
+              </Dialog>
               <Button variant="outline">Settings</Button>
               <Button variant="outline">Account</Button>
             </div>
@@ -82,16 +100,17 @@ const Dashboard = () => {
         </div>
 
         {/* Main Content Tabs */}
-        <Tabs defaultValue="email-drafting" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="email-drafting">Email Drafting</TabsTrigger>
+        <Tabs defaultValue="email-inbox" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="email-inbox">Email Inbox</TabsTrigger>
             <TabsTrigger value="customers">Customers</TabsTrigger>
             <TabsTrigger value="routes">Route Planning</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
+            <TabsTrigger value="legacy-drafting">Legacy Drafting</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="email-drafting">
-            <EmailDrafting />
+          <TabsContent value="email-inbox">
+            <EmailInbox />
           </TabsContent>
 
           <TabsContent value="customers">
@@ -135,6 +154,29 @@ const Dashboard = () => {
                     Integrated booking system for hotels, flights, and activities will be available soon.
                   </p>
                   <Button disabled>Request Early Access</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="legacy-drafting">
+            <Card>
+              <CardHeader>
+                <CardTitle>Legacy Email Drafting</CardTitle>
+                <CardDescription>
+                  The original email drafting interface (deprecated - use Email Inbox instead)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-12">
+                  <Mail className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Use Email Inbox Instead</h3>
+                  <p className="text-gray-600 mb-6">
+                    The new Email Inbox provides better integration with Gmail/Outlook and improved AI assistance.
+                  </p>
+                  <Button onClick={() => document.querySelector('[value="email-inbox"]')?.click()}>
+                    Go to Email Inbox
+                  </Button>
                 </div>
               </CardContent>
             </Card>
