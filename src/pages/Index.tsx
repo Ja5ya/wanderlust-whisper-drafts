@@ -18,7 +18,7 @@ const Index = () => {
               <Link to="/dashboard">
                 <Button variant="outline">Dashboard</Button>
               </Link>
-              <Button>Get Started</Button>
+              <Button>Login</Button>
             </div>
           </div>
         </div>
@@ -37,7 +37,7 @@ const Index = () => {
           <div className="flex justify-center space-x-4">
             <Link to="/dashboard">
               <Button size="lg" className="text-lg px-8 py-3">
-                Try Email Drafting
+                Login
               </Button>
             </Link>
             <Button variant="outline" size="lg" className="text-lg px-8 py-3">

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Mail, Send, RefreshCw, Plus, Check, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import SpeechToText from "./SpeechToText";
 
 interface EmailMessage {
   id: string;
@@ -22,6 +23,7 @@ const EmailInbox = () => {
   const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
   const [draftResponse, setDraftResponse] = useState("");
   const [customPrompt, setCustomPrompt] = useState("");
+  const [voiceNotes, setVoiceNotes] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const { toast } = useToast();
@@ -83,6 +85,7 @@ Based on your message, I've prepared some initial recommendations:
 I'll send you a detailed proposal within 24 hours with specific pricing and availability.
 
 ${customPrompt ? `\nAdditional notes: ${customPrompt}` : ''}
+${voiceNotes ? `\nVoice notes: ${voiceNotes}` : ''}
 
 Best regards,
 Travel Specialist
@@ -105,6 +108,8 @@ TravelAssist DMC`;
     });
     setDraftResponse("");
     setSelectedEmail(null);
+    setVoiceNotes("");
+    setCustomPrompt("");
   };
 
   const addToFAQ = () => {
@@ -228,6 +233,23 @@ TravelAssist DMC`;
                         value={customPrompt}
                         onChange={(e) => setCustomPrompt(e.target.value)}
                       />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="voice-notes">Voice Notes</Label>
+                      <Textarea
+                        id="voice-notes"
+                        placeholder="Your voice notes will appear here..."
+                        value={voiceNotes}
+                        onChange={(e) => setVoiceNotes(e.target.value)}
+                        rows={3}
+                      />
+                      <div className="mt-2">
+                        <SpeechToText 
+                          onTranscript={(text) => setVoiceNotes(text)}
+                          placeholder="Click microphone to add voice notes..."
+                        />
+                      </div>
                     </div>
 
                     <Button 
