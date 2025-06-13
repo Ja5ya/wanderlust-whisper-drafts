@@ -6,19 +6,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Mail, Users, Calendar, Route, Settings, AlertCircle, CheckCircle, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
-import EmailInbox from "@/components/EmailInbox";
+import NewMessages from "@/components/NewMessages";
 import CustomerList from "@/components/CustomerList";
 import AITrainingSettings from "@/components/AITrainingSettings";
 import BusinessAnalytics from "@/components/BusinessAnalytics";
+import RoutePlanning from "@/components/RoutePlanning";
+import BookingManagement from "@/components/BookingManagement";
 
 const Dashboard = () => {
   const [isTrainingSettingsOpen, setIsTrainingSettingsOpen] = useState(false);
 
-  const switchToEmailInbox = () => {
-    // Find the email inbox tab trigger and click it
-    const emailInboxTab = document.querySelector('[value="email-inbox"]') as HTMLButtonElement;
-    if (emailInboxTab) {
-      emailInboxTab.click();
+  const switchToNewMessages = () => {
+    const newMessagesTab = document.querySelector('[value="new-messages"]') as HTMLButtonElement;
+    if (newMessagesTab) {
+      newMessagesTab.click();
     }
   };
 
@@ -64,7 +65,7 @@ const Dashboard = () => {
 
         {/* Action Cards */}
         <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={switchToEmailInbox}>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={switchToNewMessages}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Emails to Read</CardTitle>
               <Mail className="h-4 w-4 text-muted-foreground" />
@@ -110,17 +111,17 @@ const Dashboard = () => {
         </div>
 
         {/* Main Content Tabs */}
-        <Tabs defaultValue="email-inbox" className="space-y-6">
+        <Tabs defaultValue="new-messages" className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="email-inbox">Email Inbox</TabsTrigger>
+            <TabsTrigger value="new-messages">New Messages</TabsTrigger>
             <TabsTrigger value="customers">Customers</TabsTrigger>
             <TabsTrigger value="routes">Route Planning</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="business-analytics">Business Analytics</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="email-inbox">
-            <EmailInbox />
+          <TabsContent value="new-messages">
+            <NewMessages />
           </TabsContent>
 
           <TabsContent value="customers">
@@ -128,45 +129,11 @@ const Dashboard = () => {
           </TabsContent>
 
           <TabsContent value="routes">
-            <Card>
-              <CardHeader>
-                <CardTitle>Route Planning</CardTitle>
-                <CardDescription>
-                  Create optimized itineraries for your customers (Coming Soon)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <Route className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Route Planning Coming Soon</h3>
-                  <p className="text-gray-600 mb-6">
-                    AI-powered route optimization and itinerary creation will be available in the next update.
-                  </p>
-                  <Button disabled>Request Early Access</Button>
-                </div>
-              </CardContent>
-            </Card>
+            <RoutePlanning />
           </TabsContent>
 
           <TabsContent value="bookings">
-            <Card>
-              <CardHeader>
-                <CardTitle>Booking Management</CardTitle>
-                <CardDescription>
-                  Automated hotel and flight bookings (Coming Soon)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Booking Management Coming Soon</h3>
-                  <p className="text-gray-600 mb-6">
-                    Integrated booking system for hotels, flights, and activities will be available soon.
-                  </p>
-                  <Button disabled>Request Early Access</Button>
-                </div>
-              </CardContent>
-            </Card>
+            <BookingManagement />
           </TabsContent>
 
           <TabsContent value="business-analytics">

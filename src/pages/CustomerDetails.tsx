@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Mail, Calendar, MapPin, Plane, Hotel, FileText, Download } from "lucide-react";
+import { ArrowLeft, Mail, Calendar, MapPin, Plane, Hotel, FileText, Download, Send, MessageSquare } from "lucide-react";
 
 const CustomerDetails = () => {
   const [notes, setNotes] = useState("VIP customer. Prefers luxury accommodations. Vegetarian dietary requirements. Celebrating 20th anniversary.");
@@ -40,6 +40,21 @@ const CustomerDetails = () => {
       subject: "Flight Preferences",
       type: "Information",
       status: "Pending"
+    }
+  ];
+
+  const whatsappMessages = [
+    {
+      date: "2024-01-15",
+      message: "Hi! I wanted to ask about changing our Bali hotel to a resort closer to the beach.",
+      type: "Request",
+      status: "Responded"
+    },
+    {
+      date: "2024-01-13",
+      message: "Thank you for the itinerary! Looks perfect for our family.",
+      type: "Feedback", 
+      status: "Acknowledged"
     }
   ];
 
@@ -89,17 +104,19 @@ const CustomerDetails = () => {
   ];
 
   const goBack = () => {
-    window.close();
+    window.history.back();
   };
 
   const generateVoucher = () => {
-    // This would generate and download a PDF voucher
     console.log("Generating voucher...");
   };
 
   const generateGuideSummary = () => {
-    // This would generate and download a PDF guide summary with all trip details
     console.log("Generating guide summary...");
+  };
+
+  const sendToGuide = () => {
+    console.log("Sending tour details to guide...");
   };
 
   return (
@@ -125,6 +142,10 @@ const CustomerDetails = () => {
             <Button variant="outline" onClick={generateVoucher}>
               <FileText className="h-4 w-4 mr-2" />
               Generate Voucher
+            </Button>
+            <Button variant="outline" onClick={sendToGuide}>
+              <Send className="h-4 w-4 mr-2" />
+              Send to Guide
             </Button>
             <Badge className={`px-3 py-1 ${customer.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
               {customer.status}
@@ -169,25 +190,26 @@ const CustomerDetails = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Emails</CardTitle>
-              <Mail className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Communications</CardTitle>
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{emails.length}</div>
-              <p className="text-xs text-muted-foreground">Total conversations</p>
+              <div className="text-2xl font-bold">{emails.length + whatsappMessages.length}</div>
+              <p className="text-xs text-muted-foreground">Total interactions</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="summary" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="summary">Summary</TabsTrigger>
-            <TabsTrigger value="emails">Emails</TabsTrigger>
+            <TabsTrigger value="communications">Communications</TabsTrigger>
             <TabsTrigger value="routes">Routes</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="voucher">Voucher</TabsTrigger>
+            <TabsTrigger value="guide-summary">Guide Summary</TabsTrigger>
           </TabsList>
 
           <TabsContent value="summary">
@@ -262,45 +284,80 @@ const CustomerDetails = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="emails">
-            <Card>
-              <CardHeader>
-                <CardTitle>Email History</CardTitle>
-                <CardDescription>All email communications with this customer</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Subject</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {emails.map((email, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{email.date}</TableCell>
-                        <TableCell>{email.subject}</TableCell>
-                        <TableCell>{email.type}</TableCell>
-                        <TableCell>
-                          <Badge variant={email.status === 'Responded' ? 'default' : 'secondary'}>
-                            {email.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="outline" size="sm">
-                            View
-                          </Button>
-                        </TableCell>
+          <TabsContent value="communications">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Email History</CardTitle>
+                  <CardDescription>Email communications with this customer</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Subject</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {emails.map((email, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{email.date}</TableCell>
+                          <TableCell>{email.subject}</TableCell>
+                          <TableCell>{email.type}</TableCell>
+                          <TableCell>
+                            <Badge variant={email.status === 'Responded' ? 'default' : 'secondary'}>
+                              {email.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="outline" size="sm">View</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>WhatsApp Messages</CardTitle>
+                  <CardDescription>WhatsApp communications with this customer</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Message</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {whatsappMessages.map((msg, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{msg.date}</TableCell>
+                          <TableCell className="max-w-xs truncate">{msg.message}</TableCell>
+                          <TableCell>{msg.type}</TableCell>
+                          <TableCell>
+                            <Badge variant="default">{msg.status}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="outline" size="sm">View</Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="routes">
@@ -411,6 +468,28 @@ const CustomerDetails = () => {
                   <Button onClick={generateVoucher}>
                     <FileText className="h-4 w-4 mr-2" />
                     Generate & Download Voucher
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="guide-summary">
+            <Card>
+              <CardHeader>
+                <CardTitle>Guide Summary</CardTitle>
+                <CardDescription>Comprehensive summary for tour guides</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                  <Download className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Generate Guide Summary</h3>
+                  <p className="text-gray-600 mb-6">
+                    Create a detailed PDF summary including hotel bookings, flights, itinerary, and customer details for tour guides.
+                  </p>
+                  <Button onClick={generateGuideSummary}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Generate & Download Guide Summary
                   </Button>
                 </div>
               </CardContent>
