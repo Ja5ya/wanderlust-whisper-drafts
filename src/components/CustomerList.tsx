@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -6,68 +7,42 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Search, Mail, Calendar, MapPin } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { formatCurrency } from "@/lib/utils";
+
+interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  status: string;
+  last_contact: string;
+  destination: string;
+  trip_type: string;
+  value: number;
+}
 
 const CustomerList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
-  const customers = [
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john.doe@email.com",
-      status: "Active",
-      lastContact: "2 days ago",
-      destination: "Bali, Indonesia",
-      tripType: "Family Vacation",
-      value: "$12,500"
+  const { data: customers = [], isLoading, error } = useQuery({
+    queryKey: ['customers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as Customer[];
     },
-    {
-      id: 2,
-      name: "Sarah Smith", 
-      email: "sarah.smith@email.com",
-      status: "Planning",
-      lastContact: "1 week ago",
-      destination: "Thailand",
-      tripType: "Honeymoon",
-      value: "$8,900"
-    },
-    {
-      id: 3,
-      name: "Mike Johnson",
-      email: "mike.johnson@email.com", 
-      status: "Traveling",
-      lastContact: "3 hours ago",
-      destination: "Tokyo, Japan",
-      tripType: "Cultural Tour",
-      value: "$6,700"
-    },
-    {
-      id: 4,
-      name: "Emma Wilson",
-      email: "emma.wilson@email.com",
-      status: "Completed", 
-      lastContact: "2 weeks ago",
-      destination: "Paris, France",
-      tripType: "Business + Leisure",
-      value: "$15,200"
-    },
-    {
-      id: 5,
-      name: "David Chen",
-      email: "david.chen@email.com",
-      status: "Planning",
-      lastContact: "5 days ago", 
-      destination: "Morocco",
-      tripType: "Adventure",
-      value: "$9,400"
-    }
-  ];
+  });
 
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.destination.toLowerCase().includes(searchTerm.toLowerCase())
+    customer.destination?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusColor = (status: string) => {
@@ -80,9 +55,59 @@ const CustomerList = () => {
     }
   };
 
-  const openCustomerDetails = (customerId: number) => {
+  const openCustomerDetails = (customerId: string) => {
     navigate(`/customer/${customerId}`);
   };
+
+  const formatLastContact = (lastContact: string) => {
+    const date = new Date(lastContact);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffTime / (1000 * 60));
+
+    if (diffDays > 0) {
+      return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+    } else if (diffHours > 0) {
+      return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+    } else if (diffMinutes > 0) {
+      return diffMinutes === 1 ? '1 minute ago' : `${diffMinutes} minutes ago`;
+    } else {
+      return 'Just now';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center py-12">
+              <div className="text-gray-400 mb-4">Loading customers...</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center py-12">
+              <div className="text-red-400 mb-4">Error loading customers</div>
+              <p className="text-sm text-muted-foreground">
+                {error instanceof Error ? error.message : 'Unknown error occurred'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -130,11 +155,11 @@ const CustomerList = () => {
                         <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                           <div className="flex items-center space-x-1">
                             <MapPin className="h-3 w-3" />
-                            <span>{customer.destination}</span>
+                            <span>{customer.destination || 'No destination set'}</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <Calendar className="h-3 w-3" />
-                            <span>{customer.tripType}</span>
+                            <span>{customer.trip_type || 'No trip type'}</span>
                           </div>
                         </div>
                       </div>
@@ -142,10 +167,10 @@ const CustomerList = () => {
 
                     <div className="text-right space-y-2">
                       <div className="text-lg font-semibold text-green-600">
-                        {customer.value}
+                        {customer.value ? formatCurrency(customer.value) : 'TBD'}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        Last contact: {customer.lastContact}
+                        Last contact: {formatLastContact(customer.last_contact)}
                       </div>
                       <div className="flex space-x-2">
                         <Button size="sm" variant="outline">
@@ -163,7 +188,7 @@ const CustomerList = () => {
             ))}
           </div>
 
-          {filteredCustomers.length === 0 && (
+          {filteredCustomers.length === 0 && !isLoading && (
             <div className="text-center py-12">
               <div className="text-gray-400 mb-4">No customers found</div>
               <p className="text-sm text-muted-foreground">
