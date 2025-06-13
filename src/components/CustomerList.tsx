@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,9 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Search, Mail, Calendar, MapPin } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const CustomerList = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
 
   const customers = [
     {
@@ -80,7 +81,7 @@ const CustomerList = () => {
   };
 
   const openCustomerDetails = (customerId: number) => {
-    window.open('/customer-details', '_blank');
+    navigate(`/customer/${customerId}`);
   };
 
   return (
