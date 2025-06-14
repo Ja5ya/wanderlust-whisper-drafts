@@ -1,6 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { TablesInsert } from "@/integrations/supabase/types";
 
 export interface EnhancedBooking {
   id: string;
@@ -95,7 +96,7 @@ export const useCreateBookingItem = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (newItem: Partial<BookingItem>) => {
+    mutationFn: async (newItem: TablesInsert<'booking_items'>) => {
       const { data, error } = await supabase
         .from('booking_items')
         .insert([newItem])

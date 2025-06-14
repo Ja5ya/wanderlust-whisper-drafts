@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Mail, Users, Calendar, Route, Settings, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { Mail, Users, Calendar, Route, Settings, AlertCircle, CheckCircle, Clock, Hotel, MapIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import NewMessages from "@/components/NewMessages";
 import CustomerList from "@/components/CustomerList";
@@ -12,6 +12,9 @@ import AITrainingSettings from "@/components/AITrainingSettings";
 import BusinessAnalytics from "@/components/BusinessAnalytics";
 import RoutePlanning from "@/components/RoutePlanning";
 import BookingManagement from "@/components/BookingManagement";
+import ItineraryManagement from "@/components/ItineraryManagement";
+import HotelManagement from "@/components/HotelManagement";
+import GuideManagement from "@/components/GuideManagement";
 import { useUnreadEmailCount } from "@/hooks/useMessages";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -143,12 +146,14 @@ const Dashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="new-messages" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="new-messages">New Messages</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="new-messages">Messages</TabsTrigger>
             <TabsTrigger value="customers">Customers</TabsTrigger>
-            <TabsTrigger value="routes">Route Planning</TabsTrigger>
+            <TabsTrigger value="itineraries">Itineraries</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="business-analytics">Business Analytics</TabsTrigger>
+            <TabsTrigger value="hotels">Hotels</TabsTrigger>
+            <TabsTrigger value="guides">Guides</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
           <TabsContent value="new-messages">
@@ -159,15 +164,23 @@ const Dashboard = () => {
             <CustomerList />
           </TabsContent>
 
-          <TabsContent value="routes">
-            <RoutePlanning />
+          <TabsContent value="itineraries">
+            <ItineraryManagement />
           </TabsContent>
 
           <TabsContent value="bookings">
             <BookingManagement />
           </TabsContent>
 
-          <TabsContent value="business-analytics">
+          <TabsContent value="hotels">
+            <HotelManagement />
+          </TabsContent>
+
+          <TabsContent value="guides">
+            <GuideManagement />
+          </TabsContent>
+
+          <TabsContent value="analytics">
             <BusinessAnalytics />
           </TabsContent>
         </Tabs>

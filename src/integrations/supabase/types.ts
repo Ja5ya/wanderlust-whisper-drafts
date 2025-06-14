@@ -9,6 +9,72 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      activity_rates: {
+        Row: {
+          activity_name: string
+          activity_type: string
+          age_restrictions: string | null
+          created_at: string
+          currency: string
+          difficulty_level: string | null
+          duration_hours: number | null
+          excludes: string[] | null
+          id: string
+          includes: string[] | null
+          is_active: boolean
+          location: string
+          maximum_participants: number | null
+          minimum_participants: number | null
+          rate_per_person: number
+          seasonal_availability: string[] | null
+          supplier_contact: string | null
+          supplier_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          activity_name: string
+          activity_type: string
+          age_restrictions?: string | null
+          created_at?: string
+          currency?: string
+          difficulty_level?: string | null
+          duration_hours?: number | null
+          excludes?: string[] | null
+          id?: string
+          includes?: string[] | null
+          is_active?: boolean
+          location: string
+          maximum_participants?: number | null
+          minimum_participants?: number | null
+          rate_per_person: number
+          seasonal_availability?: string[] | null
+          supplier_contact?: string | null
+          supplier_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activity_name?: string
+          activity_type?: string
+          age_restrictions?: string | null
+          created_at?: string
+          currency?: string
+          difficulty_level?: string | null
+          duration_hours?: number | null
+          excludes?: string[] | null
+          id?: string
+          includes?: string[] | null
+          is_active?: boolean
+          location?: string
+          maximum_participants?: number | null
+          minimum_participants?: number | null
+          rate_per_person?: number
+          seasonal_availability?: string[] | null
+          supplier_contact?: string | null
+          supplier_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       booking_items: {
         Row: {
           booking_id: string
@@ -159,44 +225,6 @@ export type Database = {
           },
         ]
       }
-      conversation_summaries: {
-        Row: {
-          created_at: string
-          customer_id: string | null
-          id: string
-          interaction_count: number
-          last_interaction: string | null
-          summary_text: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          customer_id?: string | null
-          id?: string
-          interaction_count?: number
-          last_interaction?: string | null
-          summary_text: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          customer_id?: string | null
-          id?: string
-          interaction_count?: number
-          last_interaction?: string | null
-          summary_text?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "conversation_summaries_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       customers: {
         Row: {
           created_at: string
@@ -274,69 +302,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      destinations: {
-        Row: {
-          best_season: string[] | null
-          climate_info: string | null
-          country: string
-          created_at: string
-          cultural_notes: string | null
-          description: string | null
-          health_requirements: string | null
-          id: string
-          is_active: boolean
-          latitude: number | null
-          local_currency: string | null
-          longitude: number | null
-          name: string
-          popular_activities: string[] | null
-          region: string | null
-          time_zone: string | null
-          updated_at: string
-          visa_requirements: string | null
-        }
-        Insert: {
-          best_season?: string[] | null
-          climate_info?: string | null
-          country: string
-          created_at?: string
-          cultural_notes?: string | null
-          description?: string | null
-          health_requirements?: string | null
-          id?: string
-          is_active?: boolean
-          latitude?: number | null
-          local_currency?: string | null
-          longitude?: number | null
-          name: string
-          popular_activities?: string[] | null
-          region?: string | null
-          time_zone?: string | null
-          updated_at?: string
-          visa_requirements?: string | null
-        }
-        Update: {
-          best_season?: string[] | null
-          climate_info?: string | null
-          country?: string
-          created_at?: string
-          cultural_notes?: string | null
-          description?: string | null
-          health_requirements?: string | null
-          id?: string
-          is_active?: boolean
-          latitude?: number | null
-          local_currency?: string | null
-          longitude?: number | null
-          name?: string
-          popular_activities?: string[] | null
-          region?: string | null
-          time_zone?: string | null
-          updated_at?: string
-          visa_requirements?: string | null
-        }
-        Relationships: []
       }
       email_messages: {
         Row: {
@@ -420,6 +385,56 @@ export type Database = {
           usage_count?: number
         }
         Relationships: []
+      }
+      guide_rates: {
+        Row: {
+          created_at: string
+          currency: string
+          guide_id: string
+          id: string
+          is_active: boolean
+          minimum_duration: number | null
+          rate_per_unit: number
+          service_type: string
+          updated_at: string
+          valid_from: string
+          valid_to: string | null
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          guide_id: string
+          id?: string
+          is_active?: boolean
+          minimum_duration?: number | null
+          rate_per_unit: number
+          service_type: string
+          updated_at?: string
+          valid_from: string
+          valid_to?: string | null
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          guide_id?: string
+          id?: string
+          is_active?: boolean
+          minimum_duration?: number | null
+          rate_per_unit?: number
+          service_type?: string
+          updated_at?: string
+          valid_from?: string
+          valid_to?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guide_rates_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       guides: {
         Row: {
@@ -1027,6 +1042,60 @@ export type Database = {
           start_point?: string
           theme?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      transport_rates: {
+        Row: {
+          capacity: number
+          created_at: string
+          currency: string
+          driver_included: boolean | null
+          fuel_included: boolean | null
+          id: string
+          is_active: boolean
+          location: string | null
+          minimum_charge: number | null
+          rate_per_unit: number
+          rate_type: string
+          supplier_contact: string | null
+          supplier_name: string | null
+          updated_at: string
+          vehicle_type: string
+        }
+        Insert: {
+          capacity: number
+          created_at?: string
+          currency?: string
+          driver_included?: boolean | null
+          fuel_included?: boolean | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          minimum_charge?: number | null
+          rate_per_unit: number
+          rate_type: string
+          supplier_contact?: string | null
+          supplier_name?: string | null
+          updated_at?: string
+          vehicle_type: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string
+          currency?: string
+          driver_included?: boolean | null
+          fuel_included?: boolean | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          minimum_charge?: number | null
+          rate_per_unit?: number
+          rate_type?: string
+          supplier_contact?: string | null
+          supplier_name?: string | null
+          updated_at?: string
+          vehicle_type?: string
         }
         Relationships: []
       }

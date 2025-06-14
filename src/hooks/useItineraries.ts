@@ -1,6 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Tables, TablesInsert } from "@/integrations/supabase/types";
 
 export interface Itinerary {
   id: string;
@@ -79,7 +80,7 @@ export const useCreateItinerary = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (newItinerary: Partial<Itinerary>) => {
+    mutationFn: async (newItinerary: TablesInsert<'itineraries'>) => {
       const { data, error } = await supabase
         .from('itineraries')
         .insert([newItinerary])
