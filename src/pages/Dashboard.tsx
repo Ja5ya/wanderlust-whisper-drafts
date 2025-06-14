@@ -17,14 +17,10 @@ import BackOffice from "@/components/BackOffice";
 import { useUnreadEmailCount } from "@/hooks/useMessages";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useSampleData } from "@/hooks/useSampleData";
 
 const Dashboard = () => {
   const [isTrainingSettingsOpen, setIsTrainingSettingsOpen] = useState(false);
   const [isBackOfficeOpen, setIsBackOfficeOpen] = useState(false);
-
-  // Initialize sample data
-  useSampleData();
 
   const { data: unreadEmailCount = 0 } = useUnreadEmailCount();
 
@@ -51,6 +47,19 @@ const Dashboard = () => {
       
       if (error) throw error;
       return count || 0;
+    },
+  });
+
+  const { data: customerIssues = 0 } = useQuery({
+    queryKey: ['customer-issues-count'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('email_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_read', false);
+      
+      if (error) throw error;
+      return Math.min(count || 0, 10); // Cap at 10 for display purposes
     },
   });
 
@@ -156,7 +165,7 @@ const Dashboard = () => {
               <AlertCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3</div>
+              <div className="text-2xl font-bold">{customerIssues}</div>
               <p className="text-xs text-muted-foreground">Requires attention</p>
             </CardContent>
           </Card>
