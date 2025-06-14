@@ -2,29 +2,18 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { MapPin, DollarSign, Edit, Plus, Bot, Wand2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Edit, Plus, Wand2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import TourInbox from "./TourInbox";
+import RouteEditDialog from "./RouteEditDialog";
 
 const RoutePlanning = () => {
-  const [selectedCustomer, setSelectedCustomer] = useState("");
-  const [selectedTemplate, setSelectedTemplate] = useState("");
-  const [llmPrompt, setLlmPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedTour, setSelectedTour] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
-
-  const [routeDetails, setRouteDetails] = useState({
-    destination: "Bali, Indonesia",
-    duration: "8 days",
-    travelers: "Family of 4",
-    budget: "$12,500",
-    preferences: "Cultural experiences, beaches, family-friendly"
-  });
 
   const [priceBreakdown, setPriceBreakdown] = useState([
     { item: "Four Seasons Resort Bali", category: "Hotel", days: "7 nights", cost: 4800, profit: 20 },
@@ -34,13 +23,6 @@ const RoutePlanning = () => {
     { item: "Temple tours with guide", category: "Guide", days: "3 days", cost: 450, profit: 25 },
     { item: "Beach activities package", category: "Activity", days: "2 days", cost: 250, profit: 30 }
   ]);
-
-  const templates = [
-    { id: "bali-family", name: "Bali Family Adventure", duration: "8 days", price: "$12,000" },
-    { id: "thailand-cultural", name: "Thailand Cultural Tour", duration: "10 days", price: "$9,500" },
-    { id: "japan-highlights", name: "Japan Highlights", duration: "12 days", price: "$15,000" },
-    { id: "morocco-adventure", name: "Morocco Adventure", duration: "9 days", price: "$8,500" }
-  ];
 
   const itinerary = [
     { day: 1, location: "Denpasar", activities: "Arrival, hotel check-in, welcome dinner", status: "Confirmed" },
@@ -52,19 +34,6 @@ const RoutePlanning = () => {
     { day: 7, location: "Nusa Dua", activities: "Free day, shopping", status: "Pending" },
     { day: 8, location: "Denpasar", activities: "Departure", status: "Confirmed" }
   ];
-
-  const generateRoute = async () => {
-    setIsGenerating(true);
-    
-    // Simulate AI processing
-    setTimeout(() => {
-      toast({
-        title: "Route Generated",
-        description: "AI has created a customized itinerary based on email conversations and preferences."
-      });
-      setIsGenerating(false);
-    }, 3000);
-  };
 
   const updatePrice = (index: number, field: string, value: number) => {
     const updated = [...priceBreakdown];
@@ -86,212 +55,170 @@ const RoutePlanning = () => {
   const totalProfit = priceBreakdown.reduce((sum, item) => sum + (item.cost * item.profit / 100), 0);
   const totalPrice = totalCost + totalProfit;
 
+  const handleTourSelect = (tour: any) => {
+    setSelectedTour(tour);
+  };
+
+  const openEditDialog = () => {
+    setIsEditDialogOpen(true);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Controls */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Route Planning Controls</CardTitle>
-          <CardDescription>Generate AI-powered itineraries based on customer conversations</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="customer-select">Select Customer</Label>
-              <Select value={selectedCustomer} onValueChange={setSelectedCustomer}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose customer..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="john-doe">John Doe - Bali Trip</SelectItem>
-                  <SelectItem value="sarah-smith">Sarah Smith - Thailand</SelectItem>
-                  <SelectItem value="mike-johnson">Mike Johnson - Japan</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="budget">Budget Range</Label>
-              <Input id="budget" value={routeDetails.budget} readOnly />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="llm-prompt">AI Instructions</Label>
-            <Textarea
-              id="llm-prompt"
-              placeholder="e.g., Add more cultural experiences, reduce travel time between locations, include family-friendly activities..."
-              value={llmPrompt}
-              onChange={(e) => setLlmPrompt(e.target.value)}
-              rows={3}
-            />
-          </div>
-
-          <Button 
-            onClick={generateRoute}
-            disabled={isGenerating}
-            className="w-full"
-          >
-            {isGenerating ? (
-              <>
-                <Bot className="h-4 w-4 mr-2 animate-spin" />
-                Generating Route...
-              </>
-            ) : (
-              <>
-                <Wand2 className="h-4 w-4 mr-2" />
-                Generate AI Route
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Route Display (Center) */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Generated Itinerary - {routeDetails.destination}</CardTitle>
-              <CardDescription>{routeDetails.duration} • {routeDetails.travelers}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Day</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Activities</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {itinerary.map((day) => (
-                    <TableRow key={day.day}>
-                      <TableCell className="font-medium">Day {day.day}</TableCell>
-                      <TableCell>{day.location}</TableCell>
-                      <TableCell>{day.activities}</TableCell>
-                      <TableCell>
-                        <Badge variant={day.status === 'Confirmed' ? 'default' : 'secondary'}>
-                          {day.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-
-          {/* Price Breakdown */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Detailed Price Breakdown</span>
-                <Button onClick={addPriceItem} size="sm" variant="outline">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Item
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Cost</TableHead>
-                    <TableHead>Profit %</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {priceBreakdown.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{item.item}</TableCell>
-                      <TableCell>{item.category}</TableCell>
-                      <TableCell>{item.days}</TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          value={item.cost}
-                          onChange={(e) => updatePrice(index, 'cost', parseInt(e.target.value) || 0)}
-                          className="w-20"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          value={item.profit}
-                          onChange={(e) => updatePrice(index, 'profit', parseInt(e.target.value) || 0)}
-                          className="w-16"
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        ${(item.cost + (item.cost * item.profit / 100)).toFixed(0)}
-                      </TableCell>
-                      <TableCell>
-                        <Button size="sm" variant="outline">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-sm text-gray-600">Total Cost</p>
-                    <p className="text-xl font-bold">${totalCost.toFixed(0)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Total Profit</p>
-                    <p className="text-xl font-bold text-green-600">${totalProfit.toFixed(0)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Client Price</p>
-                    <p className="text-2xl font-bold text-primary">${totalPrice.toFixed(0)}</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        {/* Tour Inbox (Left) */}
+        <div className="lg:col-span-1">
+          <TourInbox onSelectTour={handleTourSelect} />
         </div>
 
-        {/* Templates (Right) */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Route Templates</CardTitle>
-              <CardDescription>Choose a template to start with</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {templates.map((template) => (
-                <div
-                  key={template.id}
-                  className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                    selectedTemplate === template.id ? 'border-primary bg-primary/5' : 'hover:bg-gray-50'
-                  }`}
-                  onClick={() => setSelectedTemplate(template.id)}
-                >
-                  <h4 className="font-medium">{template.name}</h4>
-                  <p className="text-sm text-gray-600">{template.duration}</p>
-                  <p className="text-sm font-medium text-green-600">{template.price}</p>
-                </div>
-              ))}
-              
-              <Button variant="outline" className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Create New Template
-              </Button>
-            </CardContent>
-          </Card>
+        {/* Route Display (Right) */}
+        <div className="lg:col-span-2 space-y-6">
+          {selectedTour ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>{selectedTour.tourTitle}</CardTitle>
+                      <CardDescription>
+                        {selectedTour.customerName} • {selectedTour.duration} days • {selectedTour.destination}
+                      </CardDescription>
+                    </div>
+                    <Button onClick={openEditDialog} variant="outline">
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Route
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Day</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Activities</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {itinerary.map((day) => (
+                        <TableRow key={day.day}>
+                          <TableCell className="font-medium">Day {day.day}</TableCell>
+                          <TableCell>{day.location}</TableCell>
+                          <TableCell>{day.activities}</TableCell>
+                          <TableCell>
+                            <Badge variant={day.status === 'Confirmed' ? 'default' : 'secondary'}>
+                              {day.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Price Breakdown */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Detailed Price Breakdown</span>
+                    <Button onClick={addPriceItem} size="sm" variant="outline">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Item
+                    </Button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Item</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Duration</TableHead>
+                        <TableHead>Cost</TableHead>
+                        <TableHead>Profit %</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {priceBreakdown.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{item.item}</TableCell>
+                          <TableCell>{item.category}</TableCell>
+                          <TableCell>{item.days}</TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.cost}
+                              onChange={(e) => updatePrice(index, 'cost', parseInt(e.target.value) || 0)}
+                              className="w-20"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={item.profit}
+                              onChange={(e) => updatePrice(index, 'profit', parseInt(e.target.value) || 0)}
+                              className="w-16"
+                            />
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            ${(item.cost + (item.cost * item.profit / 100)).toFixed(0)}
+                          </TableCell>
+                          <TableCell>
+                            <Button size="sm" variant="outline">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-sm text-gray-600">Total Cost</p>
+                        <p className="text-xl font-bold">${totalCost.toFixed(0)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Total Profit</p>
+                        <p className="text-xl font-bold text-green-600">${totalProfit.toFixed(0)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Client Price</p>
+                        <p className="text-2xl font-bold text-primary">${totalPrice.toFixed(0)}</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Wand2 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Tour Request</h3>
+                <p className="text-gray-600">
+                  Choose a tour request from the inbox to view and edit the route details.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
+
+      {/* Route Edit Dialog */}
+      {selectedTour && (
+        <RouteEditDialog
+          isOpen={isEditDialogOpen}
+          onClose={() => setIsEditDialogOpen(false)}
+          tourName={selectedTour.tourTitle}
+          currentItinerary={itinerary}
+        />
+      )}
     </div>
   );
 };

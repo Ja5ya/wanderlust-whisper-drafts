@@ -1,6 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency } from "@/lib/utils";
+import CustomerCalendar from "./CustomerCalendar";
 
 interface Customer {
   id: string;
@@ -119,83 +120,96 @@ const CustomerList = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Search */}
-          <div className="relative mb-6">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search customers by name, email, or destination..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+          <Tabs defaultValue="customers" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="customers">Customer List</TabsTrigger>
+              <TabsTrigger value="calendar">Calendar</TabsTrigger>
+            </TabsList>
 
-          {/* Customer List */}
-          <div className="space-y-4">
-            {filteredCustomers.map((customer) => (
-              <Card key={customer.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Avatar>
-                        <AvatarFallback>
-                          {customer.name.split(' ').map(n => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-semibold">{customer.name}</h3>
-                          <Badge className={getStatusColor(customer.status)}>
-                            {customer.status}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{customer.email}</p>
-                        
-                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                          <div className="flex items-center space-x-1">
-                            <MapPin className="h-3 w-3" />
-                            <span>{customer.destination || 'No destination set'}</span>
+            <TabsContent value="customers" className="space-y-4">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search customers by name, email, or destination..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Customer List */}
+              <div className="space-y-4">
+                {filteredCustomers.map((customer) => (
+                  <Card key={customer.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <Avatar>
+                            <AvatarFallback>
+                              {customer.name.split(' ').map(n => n[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          
+                          <div className="space-y-1">
+                            <div className="flex items-center space-x-2">
+                              <h3 className="font-semibold">{customer.name}</h3>
+                              <Badge className={getStatusColor(customer.status)}>
+                                {customer.status}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{customer.email}</p>
+                            
+                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                              <div className="flex items-center space-x-1">
+                                <MapPin className="h-3 w-3" />
+                                <span>{customer.destination || 'No destination set'}</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>{customer.trip_type || 'No trip type'}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>{customer.trip_type || 'No trip type'}</span>
+                        </div>
+
+                        <div className="text-right space-y-2">
+                          <div className="text-lg font-semibold text-green-600">
+                            {customer.value ? formatCurrency(customer.value) : 'TBD'}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Last contact: {formatLastContact(customer.last_contact)}
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button size="sm" variant="outline">
+                              <Mail className="h-3 w-3 mr-1" />
+                              Email
+                            </Button>
+                            <Button size="sm" onClick={() => openCustomerDetails(customer.id)}>
+                              View Details
+                            </Button>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
-                    <div className="text-right space-y-2">
-                      <div className="text-lg font-semibold text-green-600">
-                        {customer.value ? formatCurrency(customer.value) : 'TBD'}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Last contact: {formatLastContact(customer.last_contact)}
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">
-                          <Mail className="h-3 w-3 mr-1" />
-                          Email
-                        </Button>
-                        <Button size="sm" onClick={() => openCustomerDetails(customer.id)}>
-                          View Details
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+              {filteredCustomers.length === 0 && !isLoading && (
+                <div className="text-center py-12">
+                  <div className="text-gray-400 mb-4">No customers found</div>
+                  <p className="text-sm text-muted-foreground">
+                    Try adjusting your search terms or add new customers
+                  </p>
+                </div>
+              )}
+            </TabsContent>
 
-          {filteredCustomers.length === 0 && !isLoading && (
-            <div className="text-center py-12">
-              <div className="text-gray-400 mb-4">No customers found</div>
-              <p className="text-sm text-muted-foreground">
-                Try adjusting your search terms or add new customers
-              </p>
-            </div>
-          )}
+            <TabsContent value="calendar">
+              <CustomerCalendar />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
