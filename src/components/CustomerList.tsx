@@ -30,6 +30,7 @@ interface CustomerWithBooking extends Customer {
     end_date: string;
     destination: string;
     status: string;
+    total_amount: number;
   };
   calculated_status: string;
 }
@@ -54,9 +55,9 @@ const CustomerList = () => {
         customersData.map(async (customer) => {
           const { data: bookings, error: bookingsError } = await supabase
             .from('bookings')
-            .select('start_date, end_date, destination, status')
+            .select('start_date, end_date, destination, status, total_amount')
             .eq('customer_id', customer.id)
-            .gte('start_date', new Date().toISOString().split('T')[0]) // Future bookings only
+            .gte('start_date', new Date().toISOString().split('T')[0]) // Future and current bookings
             .order('start_date', { ascending: true })
             .limit(1);
 
@@ -66,7 +67,7 @@ const CustomerList = () => {
 
           const nextBooking = bookings && bookings.length > 0 ? bookings[0] : null;
           
-          // Calculate status based on booking dates and confirmation
+          // Calculate status based on your rules
           let calculatedStatus = customer.status;
           if (nextBooking) {
             const startDate = new Date(nextBooking.start_date);
@@ -74,10 +75,16 @@ const CustomerList = () => {
             const today = new Date();
             today.setHours(0, 0, 0, 0); // Reset time for accurate date comparison
             
+            // Check if customer is currently traveling
             if (today >= startDate && today <= endDate) {
               calculatedStatus = "Traveling";
             } else if (isFuture(startDate)) {
-              calculatedStatus = nextBooking.status === 'Confirmed' ? "Active" : "Planning";
+              // Future trip - check if payment has been made (assuming total_amount > 0 means paid)
+              if (nextBooking.status === 'Confirmed' && nextBooking.total_amount > 0) {
+                calculatedStatus = "Active";
+              } else {
+                calculatedStatus = "Planning";
+              }
             } else if (isPast(endDate)) {
               calculatedStatus = "Completed";
             }

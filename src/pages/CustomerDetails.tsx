@@ -9,7 +9,7 @@ import { ArrowLeft, Mail, Calendar, MapPin, Plane, Hotel, FileText, Download, Se
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isToday, isFuture, isPast } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 
 const CustomerDetails = () => {
@@ -115,6 +115,38 @@ const CustomerDetails = () => {
     enabled: !!customerId && typeof customerId === 'string',
   });
 
+  // Calculate the customer's current status based on bookings
+  const calculateCustomerStatus = () => {
+    if (!customer || bookings.length === 0) return customer?.status || 'Planning';
+    
+    const currentBooking = bookings.find(booking => {
+      const startDate = new Date(booking.start_date);
+      const endDate = new Date(booking.end_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return today >= startDate && today <= endDate;
+    });
+
+    if (currentBooking) return 'Traveling';
+
+    const futureBooking = bookings.find(booking => {
+      const startDate = new Date(booking.start_date);
+      return isFuture(startDate);
+    });
+
+    if (futureBooking) {
+      // Check if payment has been made (assuming total_amount > 0 means paid)
+      if (futureBooking.status === 'Confirmed' && futureBooking.total_amount > 0) {
+        return 'Active';
+      } else {
+        return 'Planning';
+      }
+    }
+
+    // All bookings are in the past
+    return 'Completed';
+  };
+
   const goBack = () => {
     window.history.back();
   };
@@ -218,6 +250,7 @@ const CustomerDetails = () => {
   }
 
   const nextBooking = bookings.find(booking => new Date(booking.start_date) >= new Date());
+  const currentStatus = calculateCustomerStatus();
   const totalCommunications = emails.length + whatsappMessages.length;
 
   return (
@@ -248,9 +281,16 @@ const CustomerDetails = () => {
               <Send className="h-4 w-4 mr-2" />
               Send to Guide
             </Button>
-            <Badge className={getStatusColor(customer.status)}>
-              {customer.status}
-            </Badge>
+            <div className="flex items-center space-x-2">
+              <Badge className={getStatusColor(currentStatus)}>
+                {currentStatus}
+              </Badge>
+              {nextBooking && (
+                <Badge variant="outline" className="text-xs">
+                  {format(parseISO(nextBooking.start_date), 'MMM d')} - {format(parseISO(nextBooking.end_date), 'MMM d, yyyy')}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
 
@@ -350,7 +390,18 @@ const CustomerDetails = () => {
                       </TableRow>
                       <TableRow>
                         <TableCell className="font-medium">Status</TableCell>
-                        <TableCell>{customer.status}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Badge className={getStatusColor(currentStatus)}>
+                              {currentStatus}
+                            </Badge>
+                            {nextBooking && (
+                              <span className="text-sm text-muted-foreground">
+                                {format(parseISO(nextBooking.start_date), 'MMM d')} - {format(parseISO(nextBooking.end_date), 'MMM d, yyyy')}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell className="font-medium">Total Value</TableCell>
@@ -374,9 +425,14 @@ const CustomerDetails = () => {
                         <TableRow key={booking.id}>
                           <TableCell className="font-medium">{booking.destination}</TableCell>
                           <TableCell>
-                            <Badge className={booking.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                              {booking.status}
-                            </Badge>
+                            <div className="flex flex-col space-y-1">
+                              <Badge className={booking.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                                {booking.status}
+                              </Badge>
+                              <span className="text-xs text-muted-foreground">
+                                {format(parseISO(booking.start_date), 'MMM d')} - {format(parseISO(booking.end_date), 'MMM d, yyyy')}
+                              </span>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
