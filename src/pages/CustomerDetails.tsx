@@ -1,19 +1,27 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Mail, Calendar, MapPin, Plane, Hotel, FileText, Download, Send, MessageSquare } from "lucide-react";
-import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { format, parseISO, isToday, isFuture, isPast } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Mail, Phone, MapPin, Users, Calendar as CalendarIcon, Info, Edit3, Briefcase, Globe, StickyNote, DollarSign, CheckCircle, Clock, Plane, UserCheck } from "lucide-react";
+import { format, parseISO, differenceInDays } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
+import type { Json } from "@/integrations/supabase/types"; // Import Json type
 
-// It's good practice to define the shape of the customer object
-// This should match the `customers` table schema from `supabase/types.ts`
+interface Booking {
+  id: string;
+  destination: string;
+  start_date: string;
+  end_date: string;
+  status: string;
+  total_amount: number;
+  booking_reference: string;
+}
+
+
 interface CustomerData {
   id: string;
   name: string;
@@ -24,714 +32,293 @@ interface CustomerData {
   trip_type: string | null;
   value: number | null;
   last_contact: string | null;
-  created_at: string;
-  updated_at: string;
-  // New fields
   number_of_people: number | null;
-  traveler_details: Json | null;
+  traveler_details: Json | null; // Use Json type
   notes_id: string | null;
   guide_id: string | null;
   start_date: string | null;
   end_date: string | null;
   nationality: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 const CustomerDetails = () => {
-  const params = useParams();
-  const customerId = params.id; // Fixed: Changed from params.customerId to params.id
-  const [notes, setNotes] = useState("");
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [customer, setCustomer] = useState<CustomerData | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  console.log('CustomerDetails - params:', params);
-  console.log('CustomerDetails - customerId extracted:', customerId);
+  useEffect(() => {
+    const fetchCustomerDetails = async () => {
+      if (!id) return;
+      setLoading(true);
+      setError(null);
+      try {
+        // Fetch customer details
+        const { data: customerData, error: customerError } = await supabase
+          .from("customers")
+          .select("*")
+          .eq("id", id)
+          .single();
 
-  const { data: customer, isLoading: customerLoading, error: customerError } = useQuery<CustomerData, Error>({
-    queryKey: ['customer-details', customerId],
-    queryFn: async () => {
-      if (!customerId || typeof customerId !== 'string') {
-        console.error('Invalid customer ID:', customerId);
-        throw new Error('Invalid customer ID provided');
+        if (customerError) throw customerError;
+        setCustomer(customerData as CustomerData);
+
+        // Fetch customer bookings
+        const { data: bookingsData, error: bookingsError } = await supabase
+          .from("bookings")
+          .select("*")
+          .eq("customer_id", id)
+          .order("start_date", { ascending: false });
+
+        if (bookingsError) throw bookingsError;
+        setBookings(bookingsData as Booking[]);
+
+      } catch (err: any) {
+        console.error("Error fetching customer details:", err);
+        setError(err.message || "Failed to fetch customer details");
+      } finally {
+        setLoading(false);
       }
-      
-      console.log('Fetching customer details for ID:', customerId);
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*') // This will fetch all columns, including new ones
-        .eq('id', customerId)
-        .single();
-      
-      if (error) {
-        console.error('Error fetching customer:', error);
-        throw error;
-      }
-      
-      console.log('Customer data fetched:', data);
-      return data as CustomerData; // Ensure the fetched data conforms to CustomerData
-    },
-    enabled: !!customerId && typeof customerId === 'string',
-  });
+    };
 
-  const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
-    queryKey: ['customer-bookings', customerId],
-    queryFn: async () => {
-      if (!customerId || typeof customerId !== 'string') return [];
-      
-      console.log('Fetching bookings for customer:', customerId);
-      const { data, error } = await supabase
-        .from('bookings')
-        .select('*')
-        .eq('customer_id', customerId)
-        .order('start_date', { ascending: true });
-      
-      if (error) {
-        console.error('Error fetching bookings:', error);
-        throw error;
-      }
-      
-      console.log('Bookings data fetched:', data);
-      return data || [];
-    },
-    enabled: !!customerId && typeof customerId === 'string',
-  });
-
-  const { data: emails = [], isLoading: emailsLoading } = useQuery({
-    queryKey: ['customer-emails', customerId],
-    queryFn: async () => {
-      if (!customerId || typeof customerId !== 'string') return [];
-      
-      console.log('Fetching emails for customer:', customerId);
-      const { data, error } = await supabase
-        .from('email_messages')
-        .select('*')
-        .eq('customer_id', customerId)
-        .order('timestamp', { ascending: false });
-      
-      if (error) {
-        console.error('Error fetching emails:', error);
-        throw error;
-      }
-      
-      console.log('Emails data fetched:', data);
-      return data || [];
-    },
-    enabled: !!customerId && typeof customerId === 'string',
-  });
-
-  const { data: whatsappMessages = [], isLoading: whatsappLoading } = useQuery({
-    queryKey: ['customer-whatsapp', customerId],
-    queryFn: async () => {
-      if (!customerId || typeof customerId !== 'string') return [];
-      
-      console.log('Fetching WhatsApp messages for customer:', customerId);
-      const { data, error } = await supabase
-        .from('whatsapp_messages')
-        .select('*')
-        .eq('customer_id', customerId)
-        .order('timestamp', { ascending: false });
-      
-      if (error) {
-        console.error('Error fetching WhatsApp messages:', error);
-        throw error;
-      }
-      
-      console.log('WhatsApp messages data fetched:', data);
-      return data || [];
-    },
-    enabled: !!customerId && typeof customerId === 'string',
-  });
-
-  // Calculate the customer's current status based on bookings
-  const calculateCustomerStatus = () => {
-    if (!customer) return 'Planning'; // Default if customer data not loaded
-    
-    // Priority 1: Check current booking from bookings table
-    const currentBookingFromBookingsTable = bookings.find(booking => {
-      const startDate = new Date(booking.start_date);
-      const endDate = new Date(booking.end_date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return today >= startDate && today <= endDate;
-    });
-
-    if (currentBookingFromBookingsTable) return 'Traveling';
-
-    // Priority 2: Check future booking from bookings table
-    const futureBookingFromBookingsTable = bookings.find(booking => {
-      const startDate = new Date(booking.start_date);
-      return isFuture(startDate);
-    });
-
-    if (futureBookingFromBookingsTable) {
-      if (futureBookingFromBookingsTable.status === 'Confirmed' && futureBookingFromBookingsTable.total_amount > 0) {
-        return 'Active';
-      } else {
-        return 'Planning';
-      }
-    }
-
-    // Priority 3: Check customer's primary start_date and end_date if no relevant bookings
-    if (customer.start_date && customer.end_date) {
-      const primaryStartDate = new Date(customer.start_date);
-      const primaryEndDate = new Date(customer.end_date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-
-      if (today >= primaryStartDate && today <= primaryEndDate) {
-        return "Traveling";
-      } else if (isFuture(primaryStartDate)) {
-        // Assuming primary trip status on customer matches 'Active' if it's confirmed/paid
-        // This might need more refined logic if payment status for primary trip is stored elsewhere
-        return customer.status === "Active" ? "Active" : "Planning";
-      }
-      // If past, will fall through to check if any booking was completed.
-    }
-    
-    // Priority 4: If all bookings are in the past, or no bookings and primary trip is past
-    const allBookingsPast = bookings.every(booking => isPast(new Date(booking.end_date)));
-    const primaryTripPast = customer.end_date ? isPast(new Date(customer.end_date)) : false;
-
-    if (bookings.length > 0 && allBookingsPast) {
-      return 'Completed';
-    }
-    if (bookings.length === 0 && customer.start_date && primaryTripPast) {
-      return 'Completed';
-    }
-    
-    // Default to customer's original status or 'Planning'
-    return customer.status || 'Planning';
-  };
-
-  const goBack = () => {
-    window.history.back();
-  };
-
-  const generateVoucher = () => {
-    console.log("Generating voucher...");
-  };
-
-  const generateGuideSummary = () => {
-    console.log("Generating guide summary...");
-  };
-
-  const sendToGuide = () => {
-    console.log("Sending tour details to guide...");
-  };
-
+    fetchCustomerDetails();
+  }, [id]);
+  
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Active": return "bg-green-100 text-green-800";
-      case "Planning": return "bg-blue-100 text-blue-800";
-      case "Traveling": return "bg-orange-100 text-orange-800";
-      case "Completed": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+    switch (status?.toLowerCase()) {
+      case "active":
+      case "confirmed":
+        return "bg-green-100 text-green-800";
+      case "planning":
+      case "pending":
+        return "bg-blue-100 text-blue-800";
+      case "traveling":
+        return "bg-orange-100 text-orange-800";
+      case "completed":
+      case "past":
+        return "bg-gray-100 text-gray-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-200 text-gray-700";
     }
   };
 
-  const isLoading = customerLoading || bookingsLoading || emailsLoading || whatsappLoading;
+  const calculateTripProgress = (startDateString?: string | null, endDateString?: string | null) => {
+    if (!startDateString || !endDateString) return { progress: 0, label: "Dates not set" };
+    
+    const startDate = parseISO(startDateString);
+    const endDate = parseISO(endDateString);
+    const today = new Date();
+    today.setHours(0,0,0,0);
 
-  // Show error if customer ID is invalid
-  if (!customerId || typeof customerId !== 'string') {
-    return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-12">
-            <div className="text-red-400 mb-4">Invalid customer ID</div>
-            <p className="text-sm text-muted-foreground">
-              The customer ID in the URL is not valid
-            </p>
-            <Button onClick={goBack} className="mt-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Customers
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    const totalDuration = differenceInDays(endDate, startDate);
+    if (totalDuration <= 0) return { progress: isPast(endDate) ? 100 : 0, label: isPast(endDate) ? "Completed" : "Starts soon/Invalid dates" };
+
+    if (isPast(endDate)) return { progress: 100, label: "Completed" };
+    if (isFuture(startDate)) return { progress: 0, label: `Starts in ${differenceInDays(startDate, today)} days` };
+    
+    const daysElapsed = differenceInDays(today, startDate);
+    const progress = Math.min(100, Math.max(0,(daysElapsed / totalDuration) * 100));
+    return { progress, label: "In Progress" };
+  };
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-screen"><div className="text-xl">Loading customer details...</div></div>;
   }
 
-  if (customerError) {
-    console.error('Customer error:', customerError);
-    return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-12">
-            <div className="text-red-400 mb-4">Error loading customer details</div>
-            <p className="text-sm text-muted-foreground">
-              {customerError instanceof Error ? customerError.message : 'Unknown error occurred'}
-            </p>
-            <Button onClick={goBack} className="mt-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Customers
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-12">
-            <div className="text-gray-400 mb-4">Loading customer details...</div>
-            <div className="text-sm text-muted-foreground">
-              Customer ID: {customerId}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  if (error) {
+    return <div className="flex justify-center items-center h-screen text-red-500"><div className="text-xl">Error: {error}</div></div>;
   }
 
   if (!customer) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center py-12">
-            <div className="text-red-400 mb-4">Customer not found</div>
-            <p className="text-sm text-muted-foreground">
-              No customer found with ID: {customerId}
-            </p>
-            <Button onClick={goBack} className="mt-4">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Customers
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    return <div className="flex justify-center items-center h-screen"><div className="text-xl">Customer not found.</div></div>;
   }
 
-  // Use customer's primary start/end date if no upcoming booking from bookings table
-  const nextBookingToDisplay = bookings.find(booking => new Date(booking.start_date) >= new Date()) || 
-    (customer.start_date && customer.end_date ? { 
-        start_date: customer.start_date, 
-        end_date: customer.end_date, 
-        destination: customer.destination || 'N/A', 
-        status: customer.status, 
-        total_amount: customer.value || 0 
-    } : null);
+  const { progress: mainTripProgress, label: mainTripProgressLabel } = calculateTripProgress(customer.start_date, customer.end_date);
 
-  const currentStatus = calculateCustomerStatus();
-  const totalCommunications = emails.length + whatsappMessages.length;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" onClick={goBack}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Customers
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{customer.name}</h1>
-              <p className="text-gray-600">{customer.email} • {customer.phone || 'No phone'}</p>
+    <div className="container mx-auto p-4 md:p-8 space-y-6">
+      <Button variant="outline" onClick={() => navigate(-1)} className="mb-4">
+        &larr; Back to Customer List
+      </Button>
+
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-muted/40 p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16 border">
+                <AvatarImage src={`https://avatar.vercel.sh/${customer.email}.png`} alt={customer.name} />
+                <AvatarFallback>{customer.name.split(' ').map(n => n[0]).join('').toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div>
+                <CardTitle className="text-2xl">{customer.name}</CardTitle>
+                <CardDescription className="flex items-center gap-1 text-sm">
+                  <Mail className="h-3 w-3" /> {customer.email}
+                </CardDescription>
+                {customer.phone && (
+                  <CardDescription className="flex items-center gap-1 text-sm">
+                    <Phone className="h-3 w-3" /> {customer.phone}
+                  </CardDescription>
+                )}
+              </div>
             </div>
+            <Button variant="outline" size="sm">
+              <Edit3 className="h-4 w-4 mr-2" />
+              Edit Profile
+            </Button>
           </div>
-          <div className="flex space-x-4">
-            <Button variant="outline" onClick={generateGuideSummary}>
-              <Download className="h-4 w-4 mr-2" />
-              Generate Guide Summary
-            </Button>
-            <Button variant="outline" onClick={generateVoucher}>
-              <FileText className="h-4 w-4 mr-2" />
-              Generate Voucher
-            </Button>
-            <Button variant="outline" onClick={sendToGuide}>
-              <Send className="h-4 w-4 mr-2" />
-              Send to Guide
-            </Button>
-            <div className="flex items-center space-x-2">
-              <Badge className={getStatusColor(currentStatus)}>
-                {currentStatus}
-              </Badge>
-              {nextBookingToDisplay && (
-                <Badge variant="outline" className="text-xs">
-                  {format(parseISO(nextBookingToDisplay.start_date), 'MMM d')} - {format(parseISO(nextBookingToDisplay.end_date), 'MMM d, yyyy')}
-                </Badge>
+        </CardHeader>
+        <CardContent className="p-6 grid md:grid-cols-3 gap-6">
+          <div className="space-y-2">
+            <h4 className="font-semibold text-sm text-muted-foreground">Primary Contact Status</h4>
+            <Badge className={getStatusColor(customer.status)}>{customer.status || "N/A"}</Badge>
+          </div>
+          <div className="space-y-2">
+            <h4 className="font-semibold text-sm text-muted-foreground">Preferred Destination</h4>
+            <p className="flex items-center gap-1"><MapPin className="h-4 w-4 text-muted-foreground" /> {customer.destination || "Not specified"}</p>
+          </div>
+          <div className="space-y-2">
+            <h4 className="font-semibold text-sm text-muted-foreground">Preferred Trip Type</h4>
+            <p className="flex items-center gap-1"><Briefcase className="h-4 w-4 text-muted-foreground" /> {customer.trip_type || "Not specified"}</p>
+          </div>
+          <div className="space-y-2">
+            <h4 className="font-semibold text-sm text-muted-foreground">Nationality</h4>
+            <p className="flex items-center gap-1"><Globe className="h-4 w-4 text-muted-foreground" /> {customer.nationality || "Not specified"}</p>
+          </div>
+           <div className="space-y-2">
+            <h4 className="font-semibold text-sm text-muted-foreground">Group Size</h4>
+            <p className="flex items-center gap-1"><Users className="h-4 w-4 text-muted-foreground" /> {customer.number_of_people || "N/A"} people</p>
+          </div>
+          <div className="space-y-2">
+            <h4 className="font-semibold text-sm text-muted-foreground">Customer Value</h4>
+            <p className="flex items-center gap-1"><DollarSign className="h-4 w-4 text-muted-foreground" /> {customer.value ? formatCurrency(customer.value) : "TBD"}</p>
+          </div>
+          <div className="space-y-2 md:col-span-3">
+            <h4 className="font-semibold text-sm text-muted-foreground">Primary Trip Dates</h4>
+            {customer.start_date && customer.end_date ? (
+              <>
+                <p className="flex items-center gap-1"><CalendarIcon className="h-4 w-4 text-muted-foreground" /> 
+                  {format(parseISO(customer.start_date), "MMM d, yyyy")} - {format(parseISO(customer.end_date), "MMM d, yyyy")}
+                </p>
+                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                  <div 
+                    className={`h-2.5 rounded-full ${mainTripProgress === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
+                    style={{ width: `${mainTripProgress}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-muted-foreground">{mainTripProgressLabel}</p>
+              </>
+            ) : (
+              <p className="text-muted-foreground">No primary trip dates set.</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="bookings">
+        <TabsList>
+          <TabsTrigger value="bookings">Bookings ({bookings.length})</TabsTrigger>
+          <TabsTrigger value="travelers">Traveler Details</TabsTrigger>
+          <TabsTrigger value="notes">Notes</TabsTrigger>
+          <TabsTrigger value="communication">Communication Log</TabsTrigger>
+        </TabsList>
+        <TabsContent value="bookings">
+          {bookings.length > 0 ? (
+            <div className="space-y-4">
+              {bookings.map(booking => {
+                const { progress, label } = calculateTripProgress(booking.start_date, booking.end_date);
+                let statusIcon = <Clock className="h-4 w-4 mr-2 text-yellow-500" />;
+                if (label === "Completed") statusIcon = <CheckCircle className="h-4 w-4 mr-2 text-green-500" />;
+                                else if (label === "In Progress") statusIcon = <Plane className="h-4 w-4 mr-2 text-blue-500" />
+
+                return (
+                  <Card key={booking.id}>
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <CardTitle className="text-lg">{booking.destination}</CardTitle>
+                          <CardDescription>Ref: {booking.booking_reference}</CardDescription>
+                        </div>
+                         <Badge className={getStatusColor(booking.status)}>{booking.status}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <p className="flex items-center"><CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" /> 
+                        {format(parseISO(booking.start_date), "MMM d, yyyy")} - {format(parseISO(booking.end_date), "MMM d, yyyy")}
+                      </p>
+                       <div className="w-full bg-gray-200 rounded-full h-1.5 dark:bg-gray-700 mt-1">
+                        <div 
+                          className={`h-1.5 rounded-full ${progress === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
+                           style={{ width: `${progress}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-xs text-muted-foreground flex items-center">{statusIcon} {label}</p>
+                      <p className="flex items-center"><DollarSign className="h-4 w-4 mr-2 text-muted-foreground" /> Total: {formatCurrency(booking.total_amount)}</p>
+                    </CardContent>
+                    <CardFooter>
+                       <Button variant="outline" size="sm">View Booking Details</Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                No bookings found for this customer.
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        <TabsContent value="travelers">
+          <Card>
+            <CardHeader>
+              <CardTitle>Traveler Information</CardTitle>
+              <CardDescription>Details of all individuals in the travel group.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {customer.traveler_details && Array.isArray(customer.traveler_details) && customer.traveler_details.length > 0 ? (
+                <ul className="space-y-3">
+                  {(customer.traveler_details as Array<{name: string; passport?: string}>).map((traveler, index) => (
+                    <li key={index} className="p-3 border rounded-md">
+                      <p className="font-semibold">{traveler.name}</p>
+                      {traveler.passport && <p className="text-sm text-muted-foreground">Passport: {traveler.passport}</p>}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted-foreground">No traveler details provided.</p>
               )}
-            </div>
-          </div>
-        </div>
-
-        {/* Customer Summary Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Destination</CardTitle>
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{ (nextBookingToDisplay?.destination) || customer.destination || 'No destination'}</div>
-              <p className="text-xs text-muted-foreground">{customer.trip_type || 'No trip type'}</p>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Travel Dates</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
+        </TabsContent>
+        <TabsContent value="notes">
+           <Card>
+            <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
             <CardContent>
-              <div className="text-lg font-bold">
-                {nextBookingToDisplay 
-                  ? `${format(parseISO(nextBookingToDisplay.start_date), 'MMM d')} - ${format(parseISO(nextBookingToDisplay.end_date), 'MMM d, yyyy')}`
-                  : 'No upcoming trips'
-                }
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {nextBookingToDisplay ? `${Math.ceil((new Date(nextBookingToDisplay.end_date).getTime() - new Date(nextBookingToDisplay.start_date).getTime()) / (1000 * 60 * 60 * 24))} days total` : ''}
-              </p>
+              {customer.notes_id ? (
+                <p>Notes ID: {customer.notes_id} (Content to be fetched)</p>
+              ) : (
+                <p className="text-muted-foreground">No notes linked to this customer.</p>
+              )}
             </CardContent>
           </Card>
-
+        </TabsContent>
+         <TabsContent value="communication">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Value</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
+            <CardHeader><CardTitle>Communication History</CardTitle></CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
-                {customer.value ? formatCurrency(customer.value) : 'TBD'}
-              </div>
-              <p className="text-xs text-muted-foreground">All inclusive</p>
+              <p className="text-muted-foreground">Communication log coming soon.</p>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Communications</CardTitle>
-              <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalCommunications}</div>
-              <p className="text-xs text-muted-foreground">Total interactions</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="summary" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
-            <TabsTrigger value="summary">Summary</TabsTrigger>
-            <TabsTrigger value="communications">Communications</TabsTrigger>
-            <TabsTrigger value="routes">Routes</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="voucher">Voucher</TabsTrigger>
-            <TabsTrigger value="guide-summary">Guide Summary</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="summary">
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Trip Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell className="font-medium">Destination</TableCell>
-                        <TableCell>{ (nextBookingToDisplay?.destination) || customer.destination || 'Not set'}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">Trip Type</TableCell>
-                        <TableCell>{customer.trip_type || 'Not set'}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">Duration</TableCell>
-                        <TableCell>
-                          {nextBookingToDisplay 
-                            ? `${Math.ceil((new Date(nextBookingToDisplay.end_date).getTime() - new Date(nextBookingToDisplay.start_date).getTime()) / (1000 * 60 * 60 * 24))} days`
-                            : 'Not set'
-                          }
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">Status</TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Badge className={getStatusColor(currentStatus)}>
-                              {currentStatus}
-                            </Badge>
-                            {nextBookingToDisplay && (
-                              <span className="text-sm text-muted-foreground">
-                                {format(parseISO(nextBookingToDisplay.start_date), 'MMM d')} - {format(parseISO(nextBookingToDisplay.end_date), 'MMM d, yyyy')}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">Total Value</TableCell>
-                        <TableCell className="text-green-600 font-semibold">
-                          {customer.value ? formatCurrency(customer.value) : 'TBD'}
-                        </TableCell>
-                      </TableRow>
-                       {/* Display new fields in summary if available */}
-                       {customer.nationality && (
-                        <TableRow>
-                          <TableCell className="font-medium">Nationality</TableCell>
-                          <TableCell>{customer.nationality}</TableCell>
-                        </TableRow>
-                      )}
-                      {customer.number_of_people && (
-                        <TableRow>
-                          <TableCell className="font-medium">Number of People</TableCell>
-                          <TableCell>{customer.number_of_people}</TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Booking Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableBody>
-                      {bookings.map((booking) => (
-                        <TableRow key={booking.id}>
-                          <TableCell className="font-medium">{booking.destination}</TableCell>
-                          <TableCell>
-                            <div className="flex flex-col space-y-1">
-                              <Badge className={booking.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                                {booking.status}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground">
-                                {format(parseISO(booking.start_date), 'MMM d')} - {format(parseISO(booking.end_date), 'MMM d, yyyy')}
-                              </span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {bookings.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={2} className="text-center text-muted-foreground">
-                            No bookings found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="communications">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Email History</CardTitle>
-                  <CardDescription>Email communications with this customer</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Subject</TableHead>
-                        <TableHead>From</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {emails.map((email) => (
-                        <TableRow key={email.id}>
-                          <TableCell>{format(parseISO(email.timestamp), 'MMM d, yyyy')}</TableCell>
-                          <TableCell>{email.subject}</TableCell>
-                          <TableCell>{email.from_email}</TableCell>
-                          <TableCell>
-                            <Badge variant={email.is_read ? 'default' : 'secondary'}>
-                              {email.is_read ? 'Read' : 'Unread'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {emails.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground">
-                            No emails found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>WhatsApp Messages</CardTitle>
-                  <CardDescription>WhatsApp communications with this customer</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Message</TableHead>
-                        <TableHead>Direction</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {whatsappMessages.map((msg) => (
-                        <TableRow key={msg.id}>
-                          <TableCell>{format(parseISO(msg.timestamp), 'MMM d, yyyy')}</TableCell>
-                          <TableCell className="max-w-xs truncate">{msg.message_content}</TableCell>
-                          <TableCell>{msg.is_incoming ? 'Incoming' : 'Outgoing'}</TableCell>
-                          <TableCell>
-                            <Badge variant={msg.is_read ? 'default' : 'secondary'}>
-                              {msg.is_read ? 'Read' : 'Unread'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {whatsappMessages.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground">
-                            No WhatsApp messages found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="routes">
-            <Card>
-              <CardHeader>
-                <CardTitle>Planned Routes & Itinerary</CardTitle>
-                <CardDescription>Day-by-day travel plan</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">Route planning feature coming soon</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="bookings">
-            <Card>
-              <CardHeader>
-                <CardTitle>Bookings & Reservations</CardTitle>
-                <CardDescription>All confirmed and pending bookings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Destination</TableHead>
-                      <TableHead>Start Date</TableHead>
-                      <TableHead>End Date</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {bookings.map((booking) => (
-                      <TableRow key={booking.id}>
-                        <TableCell className="font-medium">{booking.destination}</TableCell>
-                        <TableCell>{format(parseISO(booking.start_date), 'MMM d, yyyy')}</TableCell>
-                        <TableCell>{format(parseISO(booking.end_date), 'MMM d, yyyy')}</TableCell>
-                        <TableCell className="font-semibold">{formatCurrency(booking.total_amount)}</TableCell>
-                        <TableCell>
-                          <Badge className="bg-green-100 text-green-800">
-                            {booking.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {bookings.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground">
-                          No bookings found
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="notes">
-            <Card>
-              <CardHeader>
-                <CardTitle>Customer Notes & Special Requests</CardTitle>
-                <CardDescription>Important information about the customer</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={10}
-                  placeholder="Add notes about customer preferences, special requests, dietary requirements, etc."
-                />
-                <div className="mt-4">
-                  <Button>Save Notes</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="voucher">
-            <Card>
-              <CardHeader>
-                <CardTitle>Trip Voucher</CardTitle>
-                <CardDescription>Official travel confirmation and voucher</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                  <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Generate Trip Voucher</h3>
-                  <p className="text-gray-600 mb-6">
-                    Create an official PDF voucher with all trip details, confirmations, and emergency contacts.
-                  </p>
-                  <Button onClick={generateVoucher}>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Generate & Download Voucher
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="guide-summary">
-            <Card>
-              <CardHeader>
-                <CardTitle>Guide Summary</CardTitle>
-                <CardDescription>Comprehensive summary for tour guides</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                  <Download className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Generate Guide Summary</h3>
-                  <p className="text-gray-600 mb-6">
-                    Create a detailed PDF summary including hotel bookings, flights, itinerary, and customer details for tour guides.
-                  </p>
-                  <Button onClick={generateGuideSummary}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Generate & Download Guide Summary
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

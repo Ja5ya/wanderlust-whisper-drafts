@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency } from "@/lib/utils";
 import { format, parseISO, isToday, isFuture, isPast } from "date-fns";
+import type { Json } from "@/integrations/supabase/types"; // Import Json type
 import CustomerCalendar from "./CustomerCalendar";
 
 interface Customer {
@@ -23,7 +24,7 @@ interface Customer {
   trip_type: string | null;
   value: number | null;
   number_of_people: number | null;
-  traveler_details: Json | null;
+  traveler_details: Json | null; // Use Json type
   notes_id: string | null;
   guide_id: string | null;
   start_date: string | null;
@@ -169,14 +170,15 @@ const CustomerList = () => {
     }
   };
 
-  const formatTravelDates = (booking: { start_date: string; end_date: string } | Customer) => {
-    if ('next_booking' in booking && booking.next_booking) { // It's a CustomerWithBooking with a next_booking
-      const startDate = parseISO(booking.next_booking.start_date);
-      const endDate = parseISO(booking.next_booking.end_date);
+  const formatTravelDates = (currentCustomer: CustomerWithBooking) => {
+    if (currentCustomer.next_booking) {
+      const startDate = parseISO(currentCustomer.next_booking.start_date);
+      const endDate = parseISO(currentCustomer.next_booking.end_date);
       return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`;
-    } else if ('start_date' in booking && booking.start_date && booking.end_date) { // It's a Customer with primary dates
-      const startDate = parseISO(booking.start_date);
-      const endDate = parseISO(booking.end_date);
+    } else if (currentCustomer.start_date && currentCustomer.end_date) {
+      // currentCustomer.start_date and .end_date are string here due to the check
+      const startDate = parseISO(currentCustomer.start_date);
+      const endDate = parseISO(currentCustomer.end_date);
       return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`;
     }
     return 'No travel dates';
