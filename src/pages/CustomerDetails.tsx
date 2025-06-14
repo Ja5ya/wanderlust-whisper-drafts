@@ -1,4 +1,5 @@
-import { useParams, Link } from "react-router-dom";
+
+import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,15 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Users, Plus, DollarSign, Clock, Star, MessageSquare } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Users, Plus, DollarSign, Clock, Star, MessageSquare } from "lucide-react";
 import { format, parseISO, differenceInDays } from "date-fns";
-import { useState } from "react";
 import EmailTab from "@/components/EmailTab";
 import WhatsAppTab from "@/components/WhatsAppTab";
 import ItineraryTab from "@/components/ItineraryTab";
 
 const CustomerDetails = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
 
   const { data: customer, isLoading: customerLoading } = useQuery({
     queryKey: ['customer', id],
@@ -149,6 +150,10 @@ const CustomerDetails = () => {
   const statusInfo = getStatusInfo(customer.status);
   const tripProgress = getTripProgress();
 
+  const handleBackToCustomers = () => {
+    navigate('/dashboard');
+  };
+
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6">
@@ -156,12 +161,14 @@ const CustomerDetails = () => {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center space-x-4">
-              <Link 
-                to="/dashboard" 
-                className="flex items-center text-blue-600 hover:text-blue-800"
+              <Button 
+                variant="ghost"
+                size="sm"
+                onClick={handleBackToCustomers}
+                className="flex items-center text-blue-600 hover:text-blue-800 p-2"
               >
                 <ArrowLeft className="h-6 w-6" />
-              </Link>
+              </Button>
               <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
                 {customer.name.split(' ').map(n => n[0]).join('')}
               </div>

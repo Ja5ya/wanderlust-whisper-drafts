@@ -125,7 +125,7 @@ Your Travel Specialist 🌟`;
         </CardContent>
       </Card>
 
-      {/* AI Draft Section */}
+      {/* AI WhatsApp Assistant */}
       <Card>
         <CardHeader>
           <CardTitle>AI WhatsApp Assistant</CardTitle>
@@ -171,7 +171,7 @@ Your Travel Specialist 🌟`;
                     id="draft-response"
                     value={draftResponse}
                     onChange={(e) => setDraftResponse(e.target.value)}
-                    rows={8}
+                    rows={12}
                     className="border-green-200 bg-green-50/30"
                     placeholder="AI response will appear here automatically..."
                   />
@@ -205,6 +205,11 @@ Your Travel Specialist 🌟`;
                     placeholder="Click microphone to add voice notes..."
                   />
                 </div>
+                {voiceNotes && (
+                  <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
+                    <strong>Transcription available:</strong> Voice notes have been captured and will be included in the AI response when regenerated.
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}
