@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +14,7 @@ import { formatCurrency } from "@/lib/utils";
 
 const CustomerDetails = () => {
   const params = useParams();
-  const customerId = params.customerId;
+  const customerId = params.id; // Fixed: Changed from params.customerId to params.id
   const [notes, setNotes] = useState("");
 
   console.log('CustomerDetails - params:', params);
