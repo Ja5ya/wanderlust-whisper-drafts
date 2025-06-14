@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, Plus, Users, Phone, Mail, MapPin, Calendar } from "lucide-react";
+import { Search, Plus, Users, Phone, Mail, MapPin, Calendar, Eye } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 import CreateCustomerForm from "./CreateCustomerForm";
 
 interface Customer {
@@ -29,6 +30,7 @@ interface Customer {
 
 const CustomerList = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers'],
@@ -58,6 +60,10 @@ const CustomerList = () => {
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const handleViewDetails = (customerId: string) => {
+    navigate(`/customer/${customerId}`);
   };
 
   return (
@@ -151,7 +157,13 @@ const CustomerList = () => {
                   )}
                 </div>
                 <div className="mt-4 flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => handleViewDetails(customer.id)}
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
                     View Details
                   </Button>
                   <Button size="sm" className="flex-1">
