@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,59 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Filter, Mail, ExternalLink, Calendar, Hotel, Plane } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Search, Filter, Mail, ExternalLink, Calendar, Hotel, Plane, Plus } from "lucide-react";
+import { useBookings, useUpdateBookingStatus } from "@/hooks/useBookings";
+import CreateBookingForm from "./CreateBookingForm";
 
 const BookingManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("status");
-
-  const reservations = [
-    {
-      id: "R001",
-      client: "John Doe",
-      hotel: "Four Seasons Bali",
-      destination: "Bali",
-      checkIn: "2024-12-15",
-      checkOut: "2024-12-22",
-      status: "need-start",
-      amount: "$4,800",
-      type: "Hotel"
-    },
-    {
-      id: "R002", 
-      client: "Sarah Smith",
-      hotel: "Mandarin Oriental Bangkok",
-      destination: "Thailand",
-      checkIn: "2024-11-20",
-      checkOut: "2024-11-27",
-      status: "follow-up",
-      amount: "$3,200",
-      type: "Hotel"
-    },
-    {
-      id: "R003",
-      client: "Mike Johnson",
-      hotel: "Park Hyatt Tokyo",
-      destination: "Japan",
-      checkIn: "2024-10-10",
-      checkOut: "2024-10-17",
-      status: "completed",
-      amount: "$5,400",
-      type: "Hotel"
-    },
-    {
-      id: "F001",
-      client: "John Doe",
-      hotel: "Emirates JFK-DPS",
-      destination: "Bali",
-      checkIn: "2024-12-15",
-      checkOut: "2024-12-22",
-      status: "need-start",
-      amount: "$2,400",
-      type: "Flight"
-    }
-  ];
+  
+  const { data: bookings = [], isLoading } = useBookings();
+  const updateBookingStatus = useUpdateBookingStatus();
 
   const emailTemplates = [
     {
@@ -77,31 +35,35 @@ const BookingManagement = () => {
   ];
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case "need-start": return "bg-red-100 text-red-800";
-      case "follow-up": return "bg-yellow-100 text-yellow-800";
-      case "completed": return "bg-green-100 text-green-800";
+    switch (status.toLowerCase()) {
+      case "confirmed": return "bg-green-100 text-green-800";
+      case "pending": return "bg-yellow-100 text-yellow-800";
+      case "cancelled": return "bg-red-100 text-red-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
 
-  const filteredReservations = reservations
-    .filter(reservation => {
-      const matchesSearch = reservation.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           reservation.hotel.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           reservation.destination.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "all" || reservation.status === statusFilter;
+  const filteredBookings = bookings
+    .filter(booking => {
+      const matchesSearch = booking.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           booking.hotel?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           booking.destination.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === "all" || booking.status.toLowerCase() === statusFilter;
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
       if (sortBy === "status") {
-        const statusOrder = { "need-start": 0, "follow-up": 1, "completed": 2 };
-        return statusOrder[a.status] - statusOrder[b.status];
+        const statusOrder = { "pending": 0, "confirmed": 1, "cancelled": 2 };
+        return statusOrder[a.status.toLowerCase()] - statusOrder[b.status.toLowerCase()];
       }
-      if (sortBy === "client") return a.client.localeCompare(b.client);
-      if (sortBy === "hotel") return a.hotel.localeCompare(b.hotel);
+      if (sortBy === "client") return (a.customer?.name || '').localeCompare(b.customer?.name || '');
+      if (sortBy === "hotel") return (a.hotel?.name || '').localeCompare(b.hotel?.name || '');
       return 0;
     });
+
+  const handleStatusUpdate = (bookingId: string, newStatus: string) => {
+    updateBookingStatus.mutate({ id: bookingId, status: newStatus });
+  };
 
   return (
     <div className="space-y-6">
@@ -116,8 +78,26 @@ const BookingManagement = () => {
         <TabsContent value="all-reservations">
           <Card>
             <CardHeader>
-              <CardTitle>All Reservations</CardTitle>
-              <CardDescription>Manage all hotel and flight reservations</CardDescription>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>All Reservations</CardTitle>
+                  <CardDescription>Manage all hotel and flight reservations</CardDescription>
+                </div>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Booking
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Create New Booking</DialogTitle>
+                    </DialogHeader>
+                    <CreateBookingForm />
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
               {/* Filters */}
@@ -138,9 +118,9 @@ const BookingManagement = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="need-start">Need Start</SelectItem>
-                    <SelectItem value="follow-up">Follow Up</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -157,59 +137,68 @@ const BookingManagement = () => {
               </div>
 
               {/* Reservations Table */}
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Hotel/Flight</TableHead>
-                    <TableHead>Destination</TableHead>
-                    <TableHead>Dates</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredReservations.map((reservation) => (
-                    <TableRow key={reservation.id}>
-                      <TableCell className="font-medium">{reservation.id}</TableCell>
-                      <TableCell>{reservation.client}</TableCell>
-                      <TableCell>{reservation.hotel}</TableCell>
-                      <TableCell>{reservation.destination}</TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <div>{reservation.checkIn}</div>
-                          <div className="text-gray-500">to {reservation.checkOut}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {reservation.type === 'Hotel' ? <Hotel className="h-3 w-3 mr-1" /> : <Plane className="h-3 w-3 mr-1" />}
-                          {reservation.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-semibold">{reservation.amount}</TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(reservation.status)}>
-                          {reservation.status.replace('-', ' ')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline">
-                            View
-                          </Button>
-                          <Button size="sm">
-                            Update
-                          </Button>
-                        </div>
-                      </TableCell>
+              {isLoading ? (
+                <div className="text-center py-8">Loading bookings...</div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Reference</TableHead>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Hotel</TableHead>
+                      <TableHead>Destination</TableHead>
+                      <TableHead>Dates</TableHead>
+                      <TableHead>Guests</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBookings.map((booking) => (
+                      <TableRow key={booking.id}>
+                        <TableCell className="font-medium">{booking.booking_reference}</TableCell>
+                        <TableCell>{booking.customer?.name || 'Unknown'}</TableCell>
+                        <TableCell>{booking.hotel?.name || 'Not specified'}</TableCell>
+                        <TableCell>{booking.destination}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div>{new Date(booking.start_date).toLocaleDateString()}</div>
+                            <div className="text-gray-500">to {new Date(booking.end_date).toLocaleDateString()}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{booking.number_of_guests}</TableCell>
+                        <TableCell className="font-semibold">${booking.total_amount}</TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(booking.status)}>
+                            {booking.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Select onValueChange={(value) => handleStatusUpdate(booking.id, value)}>
+                              <SelectTrigger className="w-24">
+                                <SelectValue placeholder="Update" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                                <SelectItem value="Confirmed">Confirmed</SelectItem>
+                                <SelectItem value="Cancelled">Cancelled</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+
+              {filteredBookings.length === 0 && !isLoading && (
+                <div className="text-center py-8 text-gray-500">
+                  No bookings found matching your criteria
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

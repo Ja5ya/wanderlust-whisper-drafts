@@ -8,10 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MapPin, Star, Phone, Mail, Plus, Edit } from "lucide-react";
 import { useHotels, useHotelRates } from "@/hooks/useHotels";
+import CreateHotelForm from "./CreateHotelForm";
 
 const HotelManagement = () => {
   const { data: hotels = [], isLoading } = useHotels();
-  const [selectedHotel, setSelectedHotel] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   const filteredHotels = hotels.filter(hotel =>
@@ -224,10 +224,20 @@ const HotelManagement = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Hotel Management</h2>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Hotel
-        </Button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Hotel
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Add New Hotel</DialogTitle>
+            </DialogHeader>
+            <CreateHotelForm />
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="flex space-x-4">

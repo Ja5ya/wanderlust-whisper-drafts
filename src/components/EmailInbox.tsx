@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,58 +7,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Mail, Send, RefreshCw, Plus, Check, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useEmailMessages } from "@/hooks/useMessages";
+import { useAddToFAQ } from "@/hooks/useAddToFAQ";
 import SpeechToText from "./SpeechToText";
 
-interface EmailMessage {
-  id: string;
-  from: string;
-  subject: string;
-  content: string;
-  timestamp: string;
-  isRead: boolean;
-}
-
 const EmailInbox = () => {
-  const [selectedEmail, setSelectedEmail] = useState<EmailMessage | null>(null);
+  const [selectedEmail, setSelectedEmail] = useState<any>(null);
   const [draftResponse, setDraftResponse] = useState("");
   const [customPrompt, setCustomPrompt] = useState("");
   const [voiceNotes, setVoiceNotes] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, setIsConnected] = useState(true); // Set to true since we have database data
+  const [faqQuestion, setFaqQuestion] = useState("");
+  const [faqAnswer, setFaqAnswer] = useState("");
   const { toast } = useToast();
 
-  // Mock email data
-  const [emails] = useState<EmailMessage[]>([
-    {
-      id: "1",
-      from: "john.doe@email.com",
-      subject: "Bali Trip Inquiry - Family of 4",
-      content: "Hi, I'm planning a 7-day trip to Bali for my family of 4 in December. We're interested in cultural experiences, some beach time, and family-friendly activities. Could you help us plan an itinerary and provide pricing?",
-      timestamp: "2024-01-15 09:30",
-      isRead: false
-    },
-    {
-      id: "2", 
-      from: "sarah.smith@email.com",
-      subject: "Thailand Itinerary Changes",
-      content: "Hello, we need to modify our upcoming trip to Thailand. We'd like to extend our stay in Bangkok by 2 days and skip Phuket due to weather concerns. Can you help us adjust the booking?",
-      timestamp: "2024-01-15 08:15",
-      isRead: false
-    },
-    {
-      id: "3",
-      from: "mike.johnson@email.com", 
-      subject: "Tokyo Temple Recommendations",
-      content: "We're arriving in Tokyo next week and wondering about the best temples to visit. Also, are there any special cultural events happening during our stay from March 15-22?",
-      timestamp: "2024-01-14 16:45",
-      isRead: true
-    }
-  ]);
+  const { data: emails = [], isLoading } = useEmailMessages();
+  const addToFAQ = useAddToFAQ();
 
   const connectEmailProvider = (provider: string) => {
-    // Simulate connection
     setIsConnected(true);
     toast({
       title: "Success",
@@ -72,11 +43,11 @@ const EmailInbox = () => {
     
     // Simulate AI processing
     setTimeout(() => {
-      let draft = `Dear ${selectedEmail.from.split('@')[0]},
+      let draft = `Dear ${selectedEmail.customer?.name || selectedEmail.from_email.split('@')[0]},
 
-Thank you for your inquiry. I'd be happy to help you with your travel needs.
+Thank you for your message. I'd be happy to help you with your travel needs.
 
-Based on your message, I've prepared some initial recommendations:
+Based on your inquiry, I've prepared some initial recommendations:
 • Customized itinerary based on your preferences
 • Family-friendly accommodations
 • Local experiences and cultural activities
@@ -112,17 +83,24 @@ TravelAssist DMC`;
     setCustomPrompt("");
   };
 
-  const addToFAQ = () => {
-    if (!selectedEmail) return;
-    
-    // Open FAQ editor in new tab
-    const newTab = window.open('/faq-editor', '_blank');
-    if (newTab) {
+  const handleAddToFAQ = () => {
+    if (!selectedEmail || !faqQuestion.trim() || !faqAnswer.trim()) {
       toast({
-        title: "Opening FAQ Editor",
-        description: "FAQ editor opened in new tab for review and editing."
+        title: "Error",
+        description: "Please fill in both question and answer fields",
+        variant: "destructive"
       });
+      return;
     }
+    
+    addToFAQ.mutate({
+      question: faqQuestion,
+      answer: faqAnswer,
+      category: "Customer Inquiries"
+    });
+    
+    setFaqQuestion("");
+    setFaqAnswer("");
   };
 
   if (!isConnected) {
@@ -182,24 +160,28 @@ TravelAssist DMC`;
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {emails.map((email) => (
-                    <div
-                      key={email.id}
-                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                        selectedEmail?.id === email.id ? 'bg-primary/10 border-primary' : 'hover:bg-gray-50'
-                      } ${!email.isRead ? 'border-l-4 border-l-blue-500' : ''}`}
-                      onClick={() => setSelectedEmail(email)}
-                    >
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="font-medium text-sm">{email.from}</span>
-                        <span className="text-xs text-gray-500">{email.timestamp}</span>
+                {isLoading ? (
+                  <div className="text-center py-4">Loading emails...</div>
+                ) : (
+                  <div className="space-y-2">
+                    {emails.map((email) => (
+                      <div
+                        key={email.id}
+                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                          selectedEmail?.id === email.id ? 'bg-primary/10 border-primary' : 'hover:bg-gray-50'
+                        } ${!email.is_read ? 'border-l-4 border-l-blue-500' : ''}`}
+                        onClick={() => setSelectedEmail(email)}
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <span className="font-medium text-sm">{email.customer?.name || email.from_email}</span>
+                          <span className="text-xs text-gray-500">{new Date(email.timestamp).toLocaleString()}</span>
+                        </div>
+                        <div className="text-sm font-medium mb-1">{email.subject}</div>
+                        <div className="text-xs text-gray-600 line-clamp-2">{email.content}</div>
                       </div>
-                      <div className="text-sm font-medium mb-1">{email.subject}</div>
-                      <div className="text-xs text-gray-600 line-clamp-2">{email.content}</div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -287,10 +269,47 @@ TravelAssist DMC`;
                             <Check className="h-4 w-4 mr-2" />
                             Accept & Move to Drafts
                           </Button>
-                          <Button onClick={addToFAQ} variant="outline">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add to FAQ
-                          </Button>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="outline">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add to FAQ
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Add to FAQ</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div>
+                                  <Label htmlFor="faq-question">Question</Label>
+                                  <Input
+                                    id="faq-question"
+                                    value={faqQuestion}
+                                    onChange={(e) => setFaqQuestion(e.target.value)}
+                                    placeholder="Enter the FAQ question..."
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor="faq-answer">Answer</Label>
+                                  <Textarea
+                                    id="faq-answer"
+                                    value={faqAnswer}
+                                    onChange={(e) => setFaqAnswer(e.target.value)}
+                                    placeholder="Enter the FAQ answer..."
+                                    rows={4}
+                                  />
+                                </div>
+                                <Button 
+                                  onClick={handleAddToFAQ} 
+                                  disabled={addToFAQ.isPending}
+                                  className="w-full"
+                                >
+                                  {addToFAQ.isPending ? "Adding..." : "Add to FAQ"}
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                         </div>
                       </>
                     )}
