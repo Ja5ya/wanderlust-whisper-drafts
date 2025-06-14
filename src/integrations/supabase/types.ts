@@ -102,11 +102,18 @@ export type Database = {
           created_at: string
           destination: string | null
           email: string
+          end_date: string | null
+          guide_id: string | null
           id: string
           last_contact: string | null
           name: string
+          nationality: string | null
+          notes_id: string | null
+          number_of_people: number | null
           phone: string | null
+          start_date: string | null
           status: string
+          traveler_details: Json | null
           trip_type: string | null
           updated_at: string
           value: number | null
@@ -115,11 +122,18 @@ export type Database = {
           created_at?: string
           destination?: string | null
           email: string
+          end_date?: string | null
+          guide_id?: string | null
           id?: string
           last_contact?: string | null
           name: string
+          nationality?: string | null
+          notes_id?: string | null
+          number_of_people?: number | null
           phone?: string | null
+          start_date?: string | null
           status?: string
+          traveler_details?: Json | null
           trip_type?: string | null
           updated_at?: string
           value?: number | null
@@ -128,11 +142,18 @@ export type Database = {
           created_at?: string
           destination?: string | null
           email?: string
+          end_date?: string | null
+          guide_id?: string | null
           id?: string
           last_contact?: string | null
           name?: string
+          nationality?: string | null
+          notes_id?: string | null
+          number_of_people?: number | null
           phone?: string | null
+          start_date?: string | null
           status?: string
+          traveler_details?: Json | null
           trip_type?: string | null
           updated_at?: string
           value?: number | null

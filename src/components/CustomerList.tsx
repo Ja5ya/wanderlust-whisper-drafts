@@ -19,9 +19,17 @@ interface Customer {
   email: string;
   status: string;
   last_contact: string;
-  destination: string;
-  trip_type: string;
-  value: number;
+  destination: string | null;
+  trip_type: string | null;
+  value: number | null;
+  number_of_people: number | null;
+  traveler_details: Json | null;
+  notes_id: string | null;
+  guide_id: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  nationality: string | null;
+  created_at: string;
 }
 
 interface CustomerWithBooking extends Customer {
@@ -52,7 +60,7 @@ const CustomerList = () => {
 
       // Fetch next booking for each customer
       const customersWithBookings: CustomerWithBooking[] = await Promise.all(
-        customersData.map(async (customer) => {
+        (customersData as Customer[]).map(async (customer) => {
           const { data: bookings, error: bookingsError } = await supabase
             .from('bookings')
             .select('start_date, end_date, destination, status, total_amount')
@@ -88,6 +96,25 @@ const CustomerList = () => {
             } else if (isPast(endDate)) {
               calculatedStatus = "Completed";
             }
+          } else {
+            // If no next booking, use customer's primary trip dates if available for status calculation
+            if (customer.start_date && customer.end_date) {
+              const primaryStartDate = new Date(customer.start_date);
+              const primaryEndDate = new Date(customer.end_date);
+              const today = new Date();
+              today.setHours(0,0,0,0);
+
+              if (today >= primaryStartDate && today <= primaryEndDate) {
+                calculatedStatus = "Traveling";
+              } else if (isFuture(primaryStartDate)) {
+                 // Assuming payment status is not directly on customer record for this primary trip
+                 // So, if future, it's "Active" or "Planning" based on original customer.status
+                calculatedStatus = customer.status === "Active" ? "Active" : "Planning";
+              } else if (isPast(primaryEndDate)) {
+                calculatedStatus = "Completed";
+              }
+            }
+            // If no next_booking and no customer.start_date/end_date, keep original customer.status
           }
 
           return {
@@ -106,7 +133,7 @@ const CustomerList = () => {
   const filteredCustomers = customers.filter(customer =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.destination?.toLowerCase().includes(searchTerm.toLowerCase())
+    (customer.destination && customer.destination.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const getStatusColor = (status: string) => {
@@ -142,10 +169,17 @@ const CustomerList = () => {
     }
   };
 
-  const formatTravelDates = (booking: { start_date: string; end_date: string }) => {
-    const startDate = parseISO(booking.start_date);
-    const endDate = parseISO(booking.end_date);
-    return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`;
+  const formatTravelDates = (booking: { start_date: string; end_date: string } | Customer) => {
+    if ('next_booking' in booking && booking.next_booking) { // It's a CustomerWithBooking with a next_booking
+      const startDate = parseISO(booking.next_booking.start_date);
+      const endDate = parseISO(booking.next_booking.end_date);
+      return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`;
+    } else if ('start_date' in booking && booking.start_date && booking.end_date) { // It's a Customer with primary dates
+      const startDate = parseISO(booking.start_date);
+      const endDate = parseISO(booking.end_date);
+      return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`;
+    }
+    return 'No travel dates';
   };
 
   if (isLoading) {
@@ -227,9 +261,9 @@ const CustomerList = () => {
                                 <Badge className={getStatusColor(customer.calculated_status)}>
                                   {customer.calculated_status}
                                 </Badge>
-                                {customer.next_booking && (
+                                {(customer.next_booking || (customer.start_date && customer.end_date)) && (
                                   <Badge variant="outline" className="text-xs">
-                                    {formatTravelDates(customer.next_booking)}
+                                    {formatTravelDates(customer)}
                                   </Badge>
                                 )}
                               </div>

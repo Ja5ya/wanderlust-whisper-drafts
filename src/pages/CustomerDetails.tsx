@@ -12,6 +12,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, isToday, isFuture, isPast } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 
+// It's good practice to define the shape of the customer object
+// This should match the `customers` table schema from `supabase/types.ts`
+interface CustomerData {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  status: string;
+  destination: string | null;
+  trip_type: string | null;
+  value: number | null;
+  last_contact: string | null;
+  created_at: string;
+  updated_at: string;
+  // New fields
+  number_of_people: number | null;
+  traveler_details: Json | null;
+  notes_id: string | null;
+  guide_id: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  nationality: string | null;
+}
+
 const CustomerDetails = () => {
   const params = useParams();
   const customerId = params.id; // Fixed: Changed from params.customerId to params.id
@@ -20,7 +44,7 @@ const CustomerDetails = () => {
   console.log('CustomerDetails - params:', params);
   console.log('CustomerDetails - customerId extracted:', customerId);
 
-  const { data: customer, isLoading: customerLoading, error: customerError } = useQuery({
+  const { data: customer, isLoading: customerLoading, error: customerError } = useQuery<CustomerData, Error>({
     queryKey: ['customer-details', customerId],
     queryFn: async () => {
       if (!customerId || typeof customerId !== 'string') {
@@ -31,7 +55,7 @@ const CustomerDetails = () => {
       console.log('Fetching customer details for ID:', customerId);
       const { data, error } = await supabase
         .from('customers')
-        .select('*')
+        .select('*') // This will fetch all columns, including new ones
         .eq('id', customerId)
         .single();
       
@@ -41,7 +65,7 @@ const CustomerDetails = () => {
       }
       
       console.log('Customer data fetched:', data);
-      return data;
+      return data as CustomerData; // Ensure the fetched data conforms to CustomerData
     },
     enabled: !!customerId && typeof customerId === 'string',
   });
@@ -117,9 +141,10 @@ const CustomerDetails = () => {
 
   // Calculate the customer's current status based on bookings
   const calculateCustomerStatus = () => {
-    if (!customer || bookings.length === 0) return customer?.status || 'Planning';
+    if (!customer) return 'Planning'; // Default if customer data not loaded
     
-    const currentBooking = bookings.find(booking => {
+    // Priority 1: Check current booking from bookings table
+    const currentBookingFromBookingsTable = bookings.find(booking => {
       const startDate = new Date(booking.start_date);
       const endDate = new Date(booking.end_date);
       const today = new Date();
@@ -127,24 +152,52 @@ const CustomerDetails = () => {
       return today >= startDate && today <= endDate;
     });
 
-    if (currentBooking) return 'Traveling';
+    if (currentBookingFromBookingsTable) return 'Traveling';
 
-    const futureBooking = bookings.find(booking => {
+    // Priority 2: Check future booking from bookings table
+    const futureBookingFromBookingsTable = bookings.find(booking => {
       const startDate = new Date(booking.start_date);
       return isFuture(startDate);
     });
 
-    if (futureBooking) {
-      // Check if payment has been made (assuming total_amount > 0 means paid)
-      if (futureBooking.status === 'Confirmed' && futureBooking.total_amount > 0) {
+    if (futureBookingFromBookingsTable) {
+      if (futureBookingFromBookingsTable.status === 'Confirmed' && futureBookingFromBookingsTable.total_amount > 0) {
         return 'Active';
       } else {
         return 'Planning';
       }
     }
 
-    // All bookings are in the past
-    return 'Completed';
+    // Priority 3: Check customer's primary start_date and end_date if no relevant bookings
+    if (customer.start_date && customer.end_date) {
+      const primaryStartDate = new Date(customer.start_date);
+      const primaryEndDate = new Date(customer.end_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (today >= primaryStartDate && today <= primaryEndDate) {
+        return "Traveling";
+      } else if (isFuture(primaryStartDate)) {
+        // Assuming primary trip status on customer matches 'Active' if it's confirmed/paid
+        // This might need more refined logic if payment status for primary trip is stored elsewhere
+        return customer.status === "Active" ? "Active" : "Planning";
+      }
+      // If past, will fall through to check if any booking was completed.
+    }
+    
+    // Priority 4: If all bookings are in the past, or no bookings and primary trip is past
+    const allBookingsPast = bookings.every(booking => isPast(new Date(booking.end_date)));
+    const primaryTripPast = customer.end_date ? isPast(new Date(customer.end_date)) : false;
+
+    if (bookings.length > 0 && allBookingsPast) {
+      return 'Completed';
+    }
+    if (bookings.length === 0 && customer.start_date && primaryTripPast) {
+      return 'Completed';
+    }
+    
+    // Default to customer's original status or 'Planning'
+    return customer.status || 'Planning';
   };
 
   const goBack = () => {
@@ -249,7 +302,16 @@ const CustomerDetails = () => {
     );
   }
 
-  const nextBooking = bookings.find(booking => new Date(booking.start_date) >= new Date());
+  // Use customer's primary start/end date if no upcoming booking from bookings table
+  const nextBookingToDisplay = bookings.find(booking => new Date(booking.start_date) >= new Date()) || 
+    (customer.start_date && customer.end_date ? { 
+        start_date: customer.start_date, 
+        end_date: customer.end_date, 
+        destination: customer.destination || 'N/A', 
+        status: customer.status, 
+        total_amount: customer.value || 0 
+    } : null);
+
   const currentStatus = calculateCustomerStatus();
   const totalCommunications = emails.length + whatsappMessages.length;
 
@@ -285,9 +347,9 @@ const CustomerDetails = () => {
               <Badge className={getStatusColor(currentStatus)}>
                 {currentStatus}
               </Badge>
-              {nextBooking && (
+              {nextBookingToDisplay && (
                 <Badge variant="outline" className="text-xs">
-                  {format(parseISO(nextBooking.start_date), 'MMM d')} - {format(parseISO(nextBooking.end_date), 'MMM d, yyyy')}
+                  {format(parseISO(nextBookingToDisplay.start_date), 'MMM d')} - {format(parseISO(nextBookingToDisplay.end_date), 'MMM d, yyyy')}
                 </Badge>
               )}
             </div>
@@ -302,7 +364,7 @@ const CustomerDetails = () => {
               <MapPin className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{customer.destination || 'No destination'}</div>
+              <div className="text-2xl font-bold">{ (nextBookingToDisplay?.destination) || customer.destination || 'No destination'}</div>
               <p className="text-xs text-muted-foreground">{customer.trip_type || 'No trip type'}</p>
             </CardContent>
           </Card>
@@ -314,13 +376,13 @@ const CustomerDetails = () => {
             </CardHeader>
             <CardContent>
               <div className="text-lg font-bold">
-                {nextBooking 
-                  ? `${format(parseISO(nextBooking.start_date), 'MMM d')} - ${format(parseISO(nextBooking.end_date), 'MMM d, yyyy')}`
+                {nextBookingToDisplay 
+                  ? `${format(parseISO(nextBookingToDisplay.start_date), 'MMM d')} - ${format(parseISO(nextBookingToDisplay.end_date), 'MMM d, yyyy')}`
                   : 'No upcoming trips'
                 }
               </div>
               <p className="text-xs text-muted-foreground">
-                {nextBooking ? `${Math.ceil((new Date(nextBooking.end_date).getTime() - new Date(nextBooking.start_date).getTime()) / (1000 * 60 * 60 * 24))} days total` : ''}
+                {nextBookingToDisplay ? `${Math.ceil((new Date(nextBookingToDisplay.end_date).getTime() - new Date(nextBookingToDisplay.start_date).getTime()) / (1000 * 60 * 60 * 24))} days total` : ''}
               </p>
             </CardContent>
           </Card>
@@ -373,7 +435,7 @@ const CustomerDetails = () => {
                     <TableBody>
                       <TableRow>
                         <TableCell className="font-medium">Destination</TableCell>
-                        <TableCell>{customer.destination || 'Not set'}</TableCell>
+                        <TableCell>{ (nextBookingToDisplay?.destination) || customer.destination || 'Not set'}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell className="font-medium">Trip Type</TableCell>
@@ -382,8 +444,8 @@ const CustomerDetails = () => {
                       <TableRow>
                         <TableCell className="font-medium">Duration</TableCell>
                         <TableCell>
-                          {nextBooking 
-                            ? `${Math.ceil((new Date(nextBooking.end_date).getTime() - new Date(nextBooking.start_date).getTime()) / (1000 * 60 * 60 * 24))} days`
+                          {nextBookingToDisplay 
+                            ? `${Math.ceil((new Date(nextBookingToDisplay.end_date).getTime() - new Date(nextBookingToDisplay.start_date).getTime()) / (1000 * 60 * 60 * 24))} days`
                             : 'Not set'
                           }
                         </TableCell>
@@ -395,9 +457,9 @@ const CustomerDetails = () => {
                             <Badge className={getStatusColor(currentStatus)}>
                               {currentStatus}
                             </Badge>
-                            {nextBooking && (
+                            {nextBookingToDisplay && (
                               <span className="text-sm text-muted-foreground">
-                                {format(parseISO(nextBooking.start_date), 'MMM d')} - {format(parseISO(nextBooking.end_date), 'MMM d, yyyy')}
+                                {format(parseISO(nextBookingToDisplay.start_date), 'MMM d')} - {format(parseISO(nextBookingToDisplay.end_date), 'MMM d, yyyy')}
                               </span>
                             )}
                           </div>
@@ -409,6 +471,19 @@ const CustomerDetails = () => {
                           {customer.value ? formatCurrency(customer.value) : 'TBD'}
                         </TableCell>
                       </TableRow>
+                       {/* Display new fields in summary if available */}
+                       {customer.nationality && (
+                        <TableRow>
+                          <TableCell className="font-medium">Nationality</TableCell>
+                          <TableCell>{customer.nationality}</TableCell>
+                        </TableRow>
+                      )}
+                      {customer.number_of_people && (
+                        <TableRow>
+                          <TableCell className="font-medium">Number of People</TableCell>
+                          <TableCell>{customer.number_of_people}</TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
