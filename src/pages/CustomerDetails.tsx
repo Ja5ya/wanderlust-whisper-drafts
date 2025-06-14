@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, MapPin, Calendar, Users, Plus, DollarSign, Clock, Star, MessageSquare } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Users, Plus, DollarSign, Clock, Star, MessageSquare, Mail, Phone } from "lucide-react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import EmailTab from "@/components/EmailTab";
 import WhatsAppTab from "@/components/WhatsAppTab";
