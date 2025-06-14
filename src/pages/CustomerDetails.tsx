@@ -6,15 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Users, Plus, DollarSign, Clock, Star, MessageSquare, Grid, List } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Users, Plus, DollarSign, Clock, Star, MessageSquare } from "lucide-react";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { useState } from "react";
 import EmailTab from "@/components/EmailTab";
 import WhatsAppTab from "@/components/WhatsAppTab";
+import ItineraryTab from "@/components/ItineraryTab";
 
 const CustomerDetails = () => {
   const { id } = useParams();
-  const [itineraryView, setItineraryView] = useState<'grid' | 'list'>('grid');
 
   const { data: customer, isLoading: customerLoading } = useQuery({
     queryKey: ['customer', id],
@@ -152,16 +152,16 @@ const CustomerDetails = () => {
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6">
-        <Link to="/dashboard" className="flex items-center text-blue-600 hover:text-blue-800 mb-4">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Customers
-        </Link>
-        
         {/* Enhanced Customer Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center space-x-4">
-              <ArrowLeft className="h-6 w-6 text-gray-400" />
+              <Link 
+                to="/dashboard" 
+                className="flex items-center text-blue-600 hover:text-blue-800"
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </Link>
               <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
                 {customer.name.split(' ').map(n => n[0]).join('')}
               </div>
@@ -315,7 +315,7 @@ const CustomerDetails = () => {
           </Card>
         </div>
 
-        {/* Main Content - Enhanced with Email/WhatsApp tabs */}
+        {/* Main Content */}
         <div className="lg:col-span-3">
           <Tabs defaultValue="messages" className="space-y-6">
             <TabsList className="grid w-full grid-cols-4">
@@ -355,95 +355,13 @@ const CustomerDetails = () => {
             </TabsContent>
 
             <TabsContent value="itineraries" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Customer Itineraries</h3>
-                <div className="flex items-center space-x-2">
-                  <div className="flex border rounded-lg p-1">
-                    <Button
-                      variant={itineraryView === 'grid' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setItineraryView('grid')}
-                    >
-                      <Grid className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={itineraryView === 'list' ? 'default' : 'ghost'}
-                      size="sm"
-                      onClick={() => setItineraryView('list')}
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Itinerary
-                  </Button>
-                </div>
-              </div>
-
-              {customerItineraries.length > 0 ? (
-                <div className={itineraryView === 'grid' ? 'grid gap-4' : 'space-y-2'}>
-                  {customerItineraries.map((itinerary: any) => (
-                    <Card key={itinerary.id} className={`hover:shadow-md transition-shadow ${itineraryView === 'list' ? 'p-4' : ''}`}>
-                      {itineraryView === 'grid' ? (
-                        <>
-                          <CardHeader>
-                            <div className="flex justify-between items-start">
-                              <CardTitle className="text-lg">{itinerary.title}</CardTitle>
-                              <Badge variant={itinerary.status === 'Draft' ? 'secondary' : 'default'}>
-                                {itinerary.status}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="grid md:grid-cols-3 gap-4">
-                              <div>
-                                <span className="text-sm font-medium">Duration:</span>
-                                <p className="text-sm text-gray-600">{itinerary.total_days} days</p>
-                              </div>
-                              <div>
-                                <span className="text-sm font-medium">Participants:</span>
-                                <p className="text-sm text-gray-600">{itinerary.total_participants || 'Not specified'}</p>
-                              </div>
-                              <div>
-                                <span className="text-sm font-medium">Budget:</span>
-                                <p className="text-sm text-gray-600">
-                                  {itinerary.budget ? `${itinerary.currency} ${itinerary.budget}` : 'Not specified'}
-                                </p>
-                              </div>
-                            </div>
-                            {itinerary.description && (
-                              <p className="text-sm text-gray-600 mt-3">{itinerary.description}</p>
-                            )}
-                          </CardContent>
-                        </>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-4">
-                              <h4 className="font-medium">{itinerary.title}</h4>
-                              <Badge variant={itinerary.status === 'Draft' ? 'secondary' : 'default'} className="text-xs">
-                                {itinerary.status}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center space-x-6 mt-1 text-sm text-gray-600">
-                              <span>{itinerary.total_days} days</span>
-                              <span>{itinerary.total_participants || 'N/A'} participants</span>
-                              <span>{itinerary.budget ? `${itinerary.currency} ${itinerary.budget}` : 'No budget'}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <p className="text-gray-500">No itineraries created yet</p>
-                  </CardContent>
-                </Card>
-              )}
+              <ItineraryTab 
+                customerItineraries={customerItineraries}
+                customerId={id!}
+                customerName={customer.name}
+                customerEmails={customerEmails}
+                customerWhatsApp={customerWhatsApp}
+              />
             </TabsContent>
 
             <TabsContent value="bookings" className="space-y-4">

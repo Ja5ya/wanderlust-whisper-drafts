@@ -200,7 +200,7 @@ const CustomerList = () => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-4">
                       <h4 className="font-medium">{customer.name}</h4>
-                      <Badge className={getStatusColor(customer.status)} size="sm">
+                      <Badge className={getStatusColor(customer.status)}>
                         {customer.status}
                       </Badge>
                     </div>
