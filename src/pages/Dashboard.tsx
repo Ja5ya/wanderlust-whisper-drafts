@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import AITrainingSettings from "@/components/AITrainingSettings";
 import BusinessAnalytics from "@/components/BusinessAnalytics";
 import RoutePlanning from "@/components/RoutePlanning";
 import ItineraryManagement from "@/components/ItineraryManagement";
+import BookingManagement from "@/components/BookingManagement";
 import BackOffice from "@/components/BackOffice";
 import { useUnreadEmailCount } from "@/hooks/useMessages";
 import { useQuery } from "@tanstack/react-query";
@@ -162,10 +164,11 @@ const Dashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="new-messages" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="new-messages">Messages</TabsTrigger>
             <TabsTrigger value="customers">Customers</TabsTrigger>
             <TabsTrigger value="itineraries">Itineraries</TabsTrigger>
+            <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
@@ -179,6 +182,10 @@ const Dashboard = () => {
 
           <TabsContent value="itineraries">
             <ItineraryManagement />
+          </TabsContent>
+
+          <TabsContent value="bookings">
+            <BookingManagement />
           </TabsContent>
 
           <TabsContent value="analytics">

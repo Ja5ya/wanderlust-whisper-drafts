@@ -1,4 +1,3 @@
-
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Users, Plus } from "lucide-react";
-import { useItineraries } from "@/hooks/useItineraries";
-import { useEnhancedBookings } from "@/hooks/useEnhancedBookings";
+import { Progress } from "@/components/ui/progress";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Users, Plus, DollarSign, Clock, Star, MessageSquare } from "lucide-react";
+import { format, parseISO, differenceInDays } from "date-fns";
 
 const CustomerDetails = () => {
   const { id } = useParams();
@@ -79,6 +78,22 @@ const CustomerDetails = () => {
     enabled: !!id,
   });
 
+  const { data: customerEmails = [] } = useQuery({
+    queryKey: ['customer-emails', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('email_messages')
+        .select('*')
+        .eq('customer_id', id)
+        .order('timestamp', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
   if (customerLoading) {
     return <div className="container mx-auto py-8">Loading customer details...</div>;
   }
@@ -87,6 +102,35 @@ const CustomerDetails = () => {
     return <div className="container mx-auto py-8">Customer not found</div>;
   }
 
+  // Calculate trip progress
+  const getTripProgress = () => {
+    if (!customer.start_date || !customer.end_date) return 0;
+    const start = parseISO(customer.start_date);
+    const end = parseISO(customer.end_date);
+    const now = new Date();
+    const totalDays = differenceInDays(end, start);
+    const daysPassed = differenceInDays(now, start);
+    return Math.max(0, Math.min(100, (daysPassed / totalDays) * 100));
+  };
+
+  const getStatusInfo = (status: string) => {
+    switch (status) {
+      case 'Planning':
+        return { color: 'bg-blue-100 text-blue-800', icon: Calendar };
+      case 'Active':
+        return { color: 'bg-green-100 text-green-800', icon: Clock };
+      case 'Traveling':
+        return { color: 'bg-orange-100 text-orange-800', icon: MapPin };
+      case 'Completed':
+        return { color: 'bg-gray-100 text-gray-800', icon: Star };
+      default:
+        return { color: 'bg-gray-100 text-gray-800', icon: Users };
+    }
+  };
+
+  const statusInfo = getStatusInfo(customer.status);
+  const tripProgress = getTripProgress();
+
   return (
     <div className="container mx-auto py-8">
       <div className="mb-6">
@@ -94,19 +138,76 @@ const CustomerDetails = () => {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Dashboard
         </Link>
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{customer.name}</h1>
-            <p className="text-gray-600">{customer.email}</p>
+        
+        {/* Enhanced Customer Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex items-center space-x-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                {customer.name.split(' ').map(n => n[0]).join('')}
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">{customer.name}</h1>
+                <p className="text-gray-600">{customer.email}</p>
+                <div className="flex items-center space-x-4 mt-2">
+                  <Badge className={statusInfo.color}>
+                    <statusInfo.icon className="h-3 w-3 mr-1" />
+                    {customer.status}
+                  </Badge>
+                  {customer.nationality && (
+                    <Badge variant="outline">{customer.nationality}</Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-right">
+              <div className="text-2xl font-bold text-green-600">
+                {customer.value ? `$${customer.value.toLocaleString()}` : 'TBD'}
+              </div>
+              <p className="text-sm text-gray-500">Total Value</p>
+            </div>
           </div>
-          <Badge variant={customer.status === 'Active' ? 'default' : 'secondary'}>
-            {customer.status}
-          </Badge>
+
+          {/* Trip Progress */}
+          {customer.start_date && customer.end_date && customer.status === 'Traveling' && (
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium">Trip Progress</span>
+                <span className="text-sm text-gray-500">{Math.round(tripProgress)}%</span>
+              </div>
+              <Progress value={tripProgress} className="h-2" />
+              <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <span>{format(parseISO(customer.start_date), 'MMM d')}</span>
+                <span>{format(parseISO(customer.end_date), 'MMM d')}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center p-3 bg-blue-50 rounded-lg">
+              <div className="text-lg font-bold text-blue-600">{customerItineraries.length}</div>
+              <div className="text-xs text-gray-600">Itineraries</div>
+            </div>
+            <div className="text-center p-3 bg-green-50 rounded-lg">
+              <div className="text-lg font-bold text-green-600">{customerBookings.length}</div>
+              <div className="text-xs text-gray-600">Bookings</div>
+            </div>
+            <div className="text-center p-3 bg-purple-50 rounded-lg">
+              <div className="text-lg font-bold text-purple-600">{customerEmails.length}</div>
+              <div className="text-xs text-gray-600">Messages</div>
+            </div>
+            <div className="text-center p-3 bg-orange-50 rounded-lg">
+              <div className="text-lg font-bold text-orange-600">{customerNotes.length}</div>
+              <div className="text-xs text-gray-600">Notes</div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-4 gap-6">
-        {/* Customer Info Sidebar */}
+        {/* Customer Info Sidebar - Enhanced */}
         <div className="lg:col-span-1 space-y-6">
           <Card>
             <CardHeader>
@@ -129,16 +230,16 @@ const CustomerDetails = () => {
                   <span className="text-sm">{customer.destination}</span>
                 </div>
               )}
-              {customer.nationality && (
-                <div>
-                  <span className="text-sm font-medium">Nationality: </span>
-                  <span className="text-sm">{customer.nationality}</span>
-                </div>
-              )}
               {customer.number_of_people && (
                 <div className="flex items-center space-x-3">
                   <Users className="h-4 w-4 text-gray-500" />
                   <span className="text-sm">{customer.number_of_people} travelers</span>
+                </div>
+              )}
+              {customer.trip_type && (
+                <div>
+                  <span className="text-sm font-medium">Trip Type: </span>
+                  <span className="text-sm">{customer.trip_type}</span>
                 </div>
               )}
             </CardContent>
@@ -169,32 +270,33 @@ const CustomerDetails = () => {
             </Card>
           )}
 
-          {customer.traveler_details && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Traveler Details</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {Array.isArray(customer.traveler_details) ? (
-                    customer.traveler_details.map((traveler: any, index: number) => (
-                      <div key={index} className="border-b pb-2 last:border-b-0">
-                        <p className="font-medium">{traveler.name}</p>
-                        {traveler.passport && (
-                          <p className="text-sm text-gray-600">Passport: {traveler.passport}</p>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-gray-600">Traveler details available</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Recent Activity */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {customerEmails.slice(0, 3).map((email: any) => (
+                  <div key={email.id} className="border-b pb-2 last:border-b-0">
+                    <div className="flex items-center space-x-2">
+                      <MessageSquare className="h-3 w-3 text-gray-400" />
+                      <span className="text-sm font-medium truncate">{email.subject}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 ml-5">
+                      {format(parseISO(email.timestamp), 'MMM d, HH:mm')}
+                    </p>
+                  </div>
+                ))}
+                {customerEmails.length === 0 && (
+                  <p className="text-sm text-gray-500">No recent activity</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Main Content */}
+        {/* Main Content - Keep existing tabs but enhanced */}
         <div className="lg:col-span-3">
           <Tabs defaultValue="itineraries" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
@@ -203,6 +305,7 @@ const CustomerDetails = () => {
               <TabsTrigger value="notes">Notes</TabsTrigger>
             </TabsList>
 
+            {/* Keep existing TabsContent sections with enhanced styling */}
             <TabsContent value="itineraries" className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Customer Itineraries</h3>
@@ -215,7 +318,7 @@ const CustomerDetails = () => {
               {customerItineraries.length > 0 ? (
                 <div className="grid gap-4">
                   {customerItineraries.map((itinerary: any) => (
-                    <Card key={itinerary.id}>
+                    <Card key={itinerary.id} className="hover:shadow-md transition-shadow">
                       <CardHeader>
                         <div className="flex justify-between items-start">
                           <CardTitle className="text-lg">{itinerary.title}</CardTitle>
@@ -269,7 +372,7 @@ const CustomerDetails = () => {
               {customerBookings.length > 0 ? (
                 <div className="grid gap-4">
                   {customerBookings.map((booking: any) => (
-                    <Card key={booking.id}>
+                    <Card key={booking.id} className="hover:shadow-md transition-shadow">
                       <CardHeader>
                         <div className="flex justify-between items-start">
                           <CardTitle className="text-lg">{booking.booking_reference}</CardTitle>
@@ -292,7 +395,7 @@ const CustomerDetails = () => {
                           </div>
                           <div>
                             <span className="text-sm font-medium">Amount:</span>
-                            <p className="text-sm text-gray-600">${booking.total_amount}</p>
+                            <p className="text-sm text-gray-600 font-bold text-green-600">${booking.total_amount}</p>
                           </div>
                         </div>
                         {booking.hotel && (
