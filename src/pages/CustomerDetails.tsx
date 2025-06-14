@@ -6,10 +6,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Mail, Phone, MapPin, Users, Calendar as CalendarIcon, Info, Edit3, Briefcase, Globe, StickyNote, DollarSign, CheckCircle, Clock, Plane, UserCheck } from "lucide-react";
-import { format, parseISO, differenceInDays } from "date-fns";
+import { format, parseISO, differenceInDays, isPast, isFuture } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import type { Json } from "@/integrations/supabase/types"; // Import Json type
+import type { Json } from "@/integrations/supabase/types";
 
 interface Booking {
   id: string;
@@ -20,7 +20,6 @@ interface Booking {
   total_amount: number;
   booking_reference: string;
 }
-
 
 interface CustomerData {
   id: string;
@@ -33,7 +32,7 @@ interface CustomerData {
   value: number | null;
   last_contact: string | null;
   number_of_people: number | null;
-  traveler_details: Json | null; // Use Json type
+  traveler_details: Json | null;
   notes_id: string | null;
   guide_id: string | null;
   start_date: string | null;
@@ -140,7 +139,6 @@ const CustomerDetails = () => {
   }
 
   const { progress: mainTripProgress, label: mainTripProgressLabel } = calculateTripProgress(customer.start_date, customer.end_date);
-
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-6">
