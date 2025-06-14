@@ -20,7 +20,7 @@ const EmailInbox = () => {
   const [customPrompt, setCustomPrompt] = useState("");
   const [voiceNotes, setVoiceNotes] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isConnected, setIsConnected] = useState(true); // Set to true since we have database data
+  const [isConnected, setIsConnected] = useState(true);
   const [faqQuestion, setFaqQuestion] = useState("");
   const [faqAnswer, setFaqAnswer] = useState("");
   const { toast } = useToast();
@@ -28,11 +28,19 @@ const EmailInbox = () => {
   const { data: emails = [], isLoading } = useEmailMessages();
   const addToFAQ = useAddToFAQ();
 
+  // Auto-generate response when email is selected
+  useEffect(() => {
+    if (selectedEmail && !draftResponse) {
+      generateDraft();
+    }
+  }, [selectedEmail]);
+
   const connectEmailProvider = (provider: string) => {
     setIsConnected(true);
     toast({
       title: "Success",
-      description: `Connected to ${provider} successfully!`
+      description: `Connected to ${provider} successfully!`,
+      className: "fixed top-4 right-4 z-50"
     });
   };
 
@@ -71,6 +79,11 @@ TravelAssist DMC`;
         className: "fixed top-4 right-4 z-50"
       });
     }, 2000);
+  };
+
+  const regenerateDraft = () => {
+    setDraftResponse("");
+    generateDraft();
   };
 
   const acceptDraft = () => {
@@ -199,6 +212,7 @@ TravelAssist DMC`;
               <CardContent className="space-y-4">
                 {selectedEmail && (
                   <>
+                    {/* Original Message - Top */}
                     <div>
                       <Label htmlFor="email-content">Original Message</Label>
                       <Textarea
@@ -210,20 +224,40 @@ TravelAssist DMC`;
                       />
                     </div>
 
-                    {/* AI Generated Response - Show first when available */}
-                    {draftResponse && (
-                      <div>
+                    {/* AI Generated Response - Below Original */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
                         <Label htmlFor="draft-response">AI Generated Response</Label>
+                        {draftResponse && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={regenerateDraft}
+                            disabled={isGenerating}
+                          >
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Regenerate
+                          </Button>
+                        )}
+                      </div>
+                      {isGenerating ? (
+                        <div className="flex items-center justify-center py-8 text-sm text-gray-500">
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Generating AI response...
+                        </div>
+                      ) : (
                         <Textarea
                           id="draft-response"
                           value={draftResponse}
                           onChange={(e) => setDraftResponse(e.target.value)}
                           rows={12}
                           className="border-green-200 bg-green-50/30"
+                          placeholder="AI response will appear here automatically..."
                         />
-                      </div>
-                    )}
+                      )}
+                    </div>
 
+                    {/* Custom Instructions - Below AI Response */}
                     <div>
                       <Label htmlFor="custom-prompt">Custom Instructions (Optional)</Label>
                       <Input
@@ -234,6 +268,7 @@ TravelAssist DMC`;
                       />
                     </div>
 
+                    {/* Voice Notes - Bottom */}
                     <div>
                       <Label htmlFor="voice-notes">Voice Notes & Transcription</Label>
                       <Textarea
@@ -251,29 +286,12 @@ TravelAssist DMC`;
                       </div>
                       {voiceNotes && (
                         <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
-                          <strong>Transcription available:</strong> Voice notes have been captured and can be included in the AI response.
+                          <strong>Transcription available:</strong> Voice notes have been captured and will be included in the AI response when regenerated.
                         </div>
                       )}
                     </div>
 
-                    <Button 
-                      onClick={generateDraft}
-                      disabled={isGenerating}
-                      className="w-full"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Generating AI Response...
-                        </>
-                      ) : (
-                        <>
-                          <Mail className="h-4 w-4 mr-2" />
-                          Generate AI Response
-                        </>
-                      )}
-                    </Button>
-
+                    {/* Action Buttons */}
                     {draftResponse && (
                       <div className="flex gap-2 pt-4 border-t">
                         <Button onClick={acceptDraft} className="flex-1">
