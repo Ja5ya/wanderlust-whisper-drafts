@@ -8,9 +8,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addDays, addWeeks, addMonths, subWeeks, subMonths, isToday, isSameMonth } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface BookingEvent {
   id: string;
+  customer_id: string;
   customer_name: string;
   destination: string;
   start_date: string;
@@ -24,6 +26,7 @@ const CustomerCalendar = () => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [view, setView] = useState<ViewType>('month');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const navigate = useNavigate();
 
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['calendar-bookings'],
@@ -32,6 +35,7 @@ const CustomerCalendar = () => {
         .from('bookings')
         .select(`
           id,
+          customer_id,
           start_date,
           end_date,
           destination,
@@ -43,6 +47,7 @@ const CustomerCalendar = () => {
       if (error) throw error;
       return data.map(booking => ({
         id: booking.id,
+        customer_id: booking.customer_id,
         customer_name: booking.customer?.name || 'Unknown',
         destination: booking.destination,
         start_date: booking.start_date,
@@ -52,12 +57,39 @@ const CustomerCalendar = () => {
     },
   });
 
+  // Generate consistent colors for customers
+  const getCustomerColor = (customerId: string) => {
+    const colors = [
+      'bg-blue-500',
+      'bg-green-500', 
+      'bg-purple-500',
+      'bg-red-500',
+      'bg-yellow-500',
+      'bg-pink-500',
+      'bg-indigo-500',
+      'bg-orange-500',
+      'bg-teal-500',
+      'bg-cyan-500'
+    ];
+    
+    // Create a simple hash from customer ID to ensure consistent colors
+    let hash = 0;
+    for (let i = 0; i < customerId.length; i++) {
+      hash = customerId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
   const getEventsForDate = (date: Date) => {
     return bookings.filter(booking => {
       const startDate = parseISO(booking.start_date);
       const endDate = parseISO(booking.end_date);
       return date >= startDate && date <= endDate;
     });
+  };
+
+  const handleEventClick = (event: BookingEvent) => {
+    navigate(`/customer-details?id=${event.customer_id}`);
   };
 
   const getCalendarDays = () => {
@@ -77,16 +109,6 @@ const CustomerCalendar = () => {
       setCurrentDate(direction === 'next' ? addWeeks(currentDate, 1) : subWeeks(currentDate, 1));
     } else {
       setCurrentDate(direction === 'next' ? addMonths(currentDate, 1) : subMonths(currentDate, 1));
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Confirmed": return "bg-green-500";
-      case "Pending": return "bg-yellow-500";
-      case "Cancelled": return "bg-red-500";
-      case "Completed": return "bg-gray-500";
-      default: return "bg-gray-500";
     }
   };
 
@@ -189,22 +211,26 @@ const CustomerCalendar = () => {
                       `}
                       onClick={() => setSelectedDate(day)}
                     >
-                      <div className={`text-sm font-medium mb-1 ${isToday(day) ? 'text-blue-600' : ''}`}>
+                      <div className={`text-sm font-medium mb-2 ${isToday(day) ? 'text-blue-600' : ''}`}>
                         {format(day, 'd')}
                       </div>
                       <div className="space-y-1">
-                        {dayEvents.slice(0, view === 'week' ? 6 : 3).map((event) => (
+                        {dayEvents.slice(0, view === 'week' ? 8 : 4).map((event) => (
                           <div
                             key={event.id}
-                            className={`text-xs px-2 py-1 rounded text-white truncate ${getStatusColor(event.status)}`}
+                            className={`text-xs px-2 py-1 rounded-full text-white cursor-pointer hover:opacity-80 transition-opacity ${getCustomerColor(event.customer_id)}`}
                             title={`${event.customer_name} - ${event.destination}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEventClick(event);
+                            }}
                           >
-                            {event.customer_name}
+                            <div className="truncate">{event.customer_name}</div>
                           </div>
                         ))}
-                        {dayEvents.length > (view === 'week' ? 6 : 3) && (
+                        {dayEvents.length > (view === 'week' ? 8 : 4) && (
                           <div className="text-xs text-gray-500 px-2">
-                            +{dayEvents.length - (view === 'week' ? 6 : 3)} more
+                            +{dayEvents.length - (view === 'week' ? 8 : 4)} more
                           </div>
                         )}
                       </div>
@@ -226,9 +252,14 @@ const CustomerCalendar = () => {
                   {selectedDateEvents.length > 0 ? (
                     <div className="space-y-3">
                       {selectedDateEvents.map((event) => (
-                        <Card key={event.id} className="p-4">
+                        <Card 
+                          key={event.id} 
+                          className="p-4 cursor-pointer hover:shadow-md transition-shadow"
+                          onClick={() => handleEventClick(event)}
+                        >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-3">
+                              <div className={`w-4 h-4 rounded-full ${getCustomerColor(event.customer_id)}`}></div>
                               <Avatar className="h-8 w-8">
                                 <AvatarFallback className="text-xs">
                                   {event.customer_name.split(' ').map(n => n[0]).join('')}
