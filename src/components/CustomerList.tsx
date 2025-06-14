@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -65,7 +64,7 @@ const CustomerList = () => {
             console.error('Error fetching bookings for customer:', customer.id, bookingsError);
           }
 
-          const nextBooking = bookings && bookings.length > 0 ? bookings[0] : undefined;
+          const nextBooking = bookings && bookings.length > 0 ? bookings[0] : null;
           
           // Calculate status based on booking dates and confirmation
           let calculatedStatus = customer.status;
@@ -73,6 +72,7 @@ const CustomerList = () => {
             const startDate = new Date(nextBooking.start_date);
             const endDate = new Date(nextBooking.end_date);
             const today = new Date();
+            today.setHours(0, 0, 0, 0); // Reset time for accurate date comparison
             
             if (today >= startDate && today <= endDate) {
               calculatedStatus = "Traveling";
