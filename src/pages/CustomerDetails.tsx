@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,17 +14,19 @@ import { format, parseISO } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 
 const CustomerDetails = () => {
-  const { customerId } = useParams();
+  const params = useParams();
+  const customerId = params.customerId;
   const [notes, setNotes] = useState("");
 
-  console.log('CustomerDetails - customerId:', customerId);
+  console.log('CustomerDetails - params:', params);
+  console.log('CustomerDetails - customerId extracted:', customerId);
 
   const { data: customer, isLoading: customerLoading, error: customerError } = useQuery({
     queryKey: ['customer-details', customerId],
     queryFn: async () => {
-      if (!customerId) {
-        console.error('No customer ID provided');
-        throw new Error('No customer ID provided');
+      if (!customerId || typeof customerId !== 'string') {
+        console.error('Invalid customer ID:', customerId);
+        throw new Error('Invalid customer ID provided');
       }
       
       console.log('Fetching customer details for ID:', customerId);
@@ -41,13 +44,13 @@ const CustomerDetails = () => {
       console.log('Customer data fetched:', data);
       return data;
     },
-    enabled: !!customerId,
+    enabled: !!customerId && typeof customerId === 'string',
   });
 
   const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ['customer-bookings', customerId],
     queryFn: async () => {
-      if (!customerId) return [];
+      if (!customerId || typeof customerId !== 'string') return [];
       
       console.log('Fetching bookings for customer:', customerId);
       const { data, error } = await supabase
@@ -62,15 +65,15 @@ const CustomerDetails = () => {
       }
       
       console.log('Bookings data fetched:', data);
-      return data;
+      return data || [];
     },
-    enabled: !!customerId,
+    enabled: !!customerId && typeof customerId === 'string',
   });
 
   const { data: emails = [], isLoading: emailsLoading } = useQuery({
     queryKey: ['customer-emails', customerId],
     queryFn: async () => {
-      if (!customerId) return [];
+      if (!customerId || typeof customerId !== 'string') return [];
       
       console.log('Fetching emails for customer:', customerId);
       const { data, error } = await supabase
@@ -85,15 +88,15 @@ const CustomerDetails = () => {
       }
       
       console.log('Emails data fetched:', data);
-      return data;
+      return data || [];
     },
-    enabled: !!customerId,
+    enabled: !!customerId && typeof customerId === 'string',
   });
 
   const { data: whatsappMessages = [], isLoading: whatsappLoading } = useQuery({
     queryKey: ['customer-whatsapp', customerId],
     queryFn: async () => {
-      if (!customerId) return [];
+      if (!customerId || typeof customerId !== 'string') return [];
       
       console.log('Fetching WhatsApp messages for customer:', customerId);
       const { data, error } = await supabase
@@ -108,9 +111,9 @@ const CustomerDetails = () => {
       }
       
       console.log('WhatsApp messages data fetched:', data);
-      return data;
+      return data || [];
     },
-    enabled: !!customerId,
+    enabled: !!customerId && typeof customerId === 'string',
   });
 
   const goBack = () => {
@@ -141,6 +144,26 @@ const CustomerDetails = () => {
 
   const isLoading = customerLoading || bookingsLoading || emailsLoading || whatsappLoading;
 
+  // Show error if customer ID is invalid
+  if (!customerId || typeof customerId !== 'string') {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <div className="text-red-400 mb-4">Invalid customer ID</div>
+            <p className="text-sm text-muted-foreground">
+              The customer ID in the URL is not valid
+            </p>
+            <Button onClick={goBack} className="mt-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Customers
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (customerError) {
     console.error('Customer error:', customerError);
     return (
@@ -161,12 +184,34 @@ const CustomerDetails = () => {
     );
   }
 
-  if (isLoading || !customer) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center py-12">
             <div className="text-gray-400 mb-4">Loading customer details...</div>
+            <div className="text-sm text-muted-foreground">
+              Customer ID: {customerId}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!customer) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <div className="text-red-400 mb-4">Customer not found</div>
+            <p className="text-sm text-muted-foreground">
+              No customer found with ID: {customerId}
+            </p>
+            <Button onClick={goBack} className="mt-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Customers
+            </Button>
           </div>
         </div>
       </div>
