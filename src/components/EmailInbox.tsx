@@ -67,7 +67,8 @@ TravelAssist DMC`;
       
       toast({
         title: "Success",
-        description: "Email draft generated successfully!"
+        description: "Email draft generated successfully!",
+        className: "fixed top-4 right-4 z-50"
       });
     }, 2000);
   };
@@ -75,7 +76,8 @@ TravelAssist DMC`;
   const acceptDraft = () => {
     toast({
       title: "Draft Accepted",
-      description: "Email moved to your drafts folder for final review and sending."
+      description: "Email moved to your drafts folder for final review and sending.",
+      className: "fixed top-4 right-4 z-50"
     });
     setDraftResponse("");
     setSelectedEmail(null);
@@ -88,7 +90,8 @@ TravelAssist DMC`;
       toast({
         title: "Error",
         description: "Please fill in both question and answer fields",
-        variant: "destructive"
+        variant: "destructive",
+        className: "fixed top-4 right-4 z-50"
       });
       return;
     }
@@ -207,6 +210,20 @@ TravelAssist DMC`;
                       />
                     </div>
 
+                    {/* AI Generated Response - Show first when available */}
+                    {draftResponse && (
+                      <div>
+                        <Label htmlFor="draft-response">AI Generated Response</Label>
+                        <Textarea
+                          id="draft-response"
+                          value={draftResponse}
+                          onChange={(e) => setDraftResponse(e.target.value)}
+                          rows={12}
+                          className="border-green-200 bg-green-50/30"
+                        />
+                      </div>
+                    )}
+
                     <div>
                       <Label htmlFor="custom-prompt">Custom Instructions (Optional)</Label>
                       <Input
@@ -218,20 +235,25 @@ TravelAssist DMC`;
                     </div>
 
                     <div>
-                      <Label htmlFor="voice-notes">Voice Notes</Label>
+                      <Label htmlFor="voice-notes">Voice Notes & Transcription</Label>
                       <Textarea
                         id="voice-notes"
-                        placeholder="Your voice notes will appear here..."
+                        placeholder="Your voice notes and transcription will appear here..."
                         value={voiceNotes}
                         onChange={(e) => setVoiceNotes(e.target.value)}
                         rows={3}
                       />
                       <div className="mt-2">
                         <SpeechToText 
-                          onTranscript={(text) => setVoiceNotes(text)}
+                          onTranscript={(text) => setVoiceNotes(prev => prev ? `${prev}\n\n${text}` : text)}
                           placeholder="Click microphone to add voice notes..."
                         />
                       </div>
+                      {voiceNotes && (
+                        <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
+                          <strong>Transcription available:</strong> Voice notes have been captured and can be included in the AI response.
+                        </div>
+                      )}
                     </div>
 
                     <Button 
@@ -242,7 +264,7 @@ TravelAssist DMC`;
                       {isGenerating ? (
                         <>
                           <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Generating...
+                          Generating AI Response...
                         </>
                       ) : (
                         <>
@@ -253,65 +275,53 @@ TravelAssist DMC`;
                     </Button>
 
                     {draftResponse && (
-                      <>
-                        <div>
-                          <Label htmlFor="draft-response">AI Generated Response</Label>
-                          <Textarea
-                            id="draft-response"
-                            value={draftResponse}
-                            onChange={(e) => setDraftResponse(e.target.value)}
-                            rows={12}
-                          />
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Button onClick={acceptDraft} className="flex-1">
-                            <Check className="h-4 w-4 mr-2" />
-                            Accept & Move to Drafts
-                          </Button>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="outline">
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add to FAQ
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Add to FAQ</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div>
-                                  <Label htmlFor="faq-question">Question</Label>
-                                  <Input
-                                    id="faq-question"
-                                    value={faqQuestion}
-                                    onChange={(e) => setFaqQuestion(e.target.value)}
-                                    placeholder="Enter the FAQ question..."
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor="faq-answer">Answer</Label>
-                                  <Textarea
-                                    id="faq-answer"
-                                    value={faqAnswer}
-                                    onChange={(e) => setFaqAnswer(e.target.value)}
-                                    placeholder="Enter the FAQ answer..."
-                                    rows={4}
-                                  />
-                                </div>
-                                <Button 
-                                  onClick={handleAddToFAQ} 
-                                  disabled={addToFAQ.isPending}
-                                  className="w-full"
-                                >
-                                  {addToFAQ.isPending ? "Adding..." : "Add to FAQ"}
-                                </Button>
+                      <div className="flex gap-2 pt-4 border-t">
+                        <Button onClick={acceptDraft} className="flex-1">
+                          <Check className="h-4 w-4 mr-2" />
+                          Accept & Move to Drafts
+                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline">
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add to FAQ
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Add to FAQ</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              <div>
+                                <Label htmlFor="faq-question">Question</Label>
+                                <Input
+                                  id="faq-question"
+                                  value={faqQuestion}
+                                  onChange={(e) => setFaqQuestion(e.target.value)}
+                                  placeholder="Enter the FAQ question..."
+                                />
                               </div>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
-                      </>
+                              <div>
+                                <Label htmlFor="faq-answer">Answer</Label>
+                                <Textarea
+                                  id="faq-answer"
+                                  value={faqAnswer}
+                                  onChange={(e) => setFaqAnswer(e.target.value)}
+                                  placeholder="Enter the FAQ answer..."
+                                  rows={4}
+                                />
+                              </div>
+                              <Button 
+                                onClick={handleAddToFAQ} 
+                                disabled={addToFAQ.isPending}
+                                className="w-full"
+                              >
+                                {addToFAQ.isPending ? "Adding..." : "Add to FAQ"}
+                              </Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
                     )}
                   </>
                 )}
