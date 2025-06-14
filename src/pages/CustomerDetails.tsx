@@ -85,8 +85,22 @@ const CustomerDetails = () => {
         .from('email_messages')
         .select('*')
         .eq('customer_id', id)
-        .order('timestamp', { ascending: false })
-        .limit(5);
+        .order('timestamp', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
+
+  const { data: customerWhatsApp = [] } = useQuery({
+    queryKey: ['customer-whatsapp', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('whatsapp_messages')
+        .select('*')
+        .eq('customer_id', id)
+        .order('timestamp', { ascending: false });
 
       if (error) throw error;
       return data;
@@ -136,13 +150,14 @@ const CustomerDetails = () => {
       <div className="mb-6">
         <Link to="/dashboard" className="flex items-center text-blue-600 hover:text-blue-800 mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Dashboard
+          Back to Customers
         </Link>
         
         {/* Enhanced Customer Header */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex justify-between items-start mb-4">
             <div className="flex items-center space-x-4">
+              <ArrowLeft className="h-6 w-6 text-gray-400" />
               <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
                 {customer.name.split(' ').map(n => n[0]).join('')}
               </div>
@@ -195,7 +210,7 @@ const CustomerDetails = () => {
               <div className="text-xs text-gray-600">Bookings</div>
             </div>
             <div className="text-center p-3 bg-purple-50 rounded-lg">
-              <div className="text-lg font-bold text-purple-600">{customerEmails.length}</div>
+              <div className="text-lg font-bold text-purple-600">{customerEmails.length + customerWhatsApp.length}</div>
               <div className="text-xs text-gray-600">Messages</div>
             </div>
             <div className="text-center p-3 bg-orange-50 rounded-lg">
@@ -296,16 +311,81 @@ const CustomerDetails = () => {
           </Card>
         </div>
 
-        {/* Main Content - Keep existing tabs but enhanced */}
+        {/* Main Content - Enhanced with Messages tab */}
         <div className="lg:col-span-3">
-          <Tabs defaultValue="itineraries" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+          <Tabs defaultValue="messages" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="messages">Messages</TabsTrigger>
               <TabsTrigger value="itineraries">Itineraries</TabsTrigger>
               <TabsTrigger value="bookings">Bookings</TabsTrigger>
               <TabsTrigger value="notes">Notes</TabsTrigger>
             </TabsList>
 
-            {/* Keep existing TabsContent sections with enhanced styling */}
+            <TabsContent value="messages" className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Messages</h3>
+              </div>
+
+              {(customerEmails.length > 0 || customerWhatsApp.length > 0) ? (
+                <div className="space-y-4">
+                  {/* Combine and sort all messages */}
+                  {[...customerEmails.map(email => ({...email, type: 'email'})), 
+                    ...customerWhatsApp.map(msg => ({...msg, type: 'whatsapp'}))]
+                    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                    .map((message: any) => (
+                    <Card key={`${message.type}-${message.id}`} className="hover:shadow-md transition-shadow">
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center space-x-2">
+                            {message.type === 'email' ? (
+                              <Mail className="h-4 w-4 text-blue-500" />
+                            ) : (
+                              <MessageSquare className="h-4 w-4 text-green-500" />
+                            )}
+                            <CardTitle className="text-lg">
+                              {message.type === 'email' ? message.subject : 'WhatsApp Message'}
+                            </CardTitle>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant={message.is_read ? 'secondary' : 'default'}>
+                              {message.is_read ? 'Read' : 'Unread'}
+                            </Badge>
+                            <span className="text-sm text-gray-500">
+                              {format(parseISO(message.timestamp), 'MMM d, yyyy HH:mm')}
+                            </span>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div>
+                            <span className="text-sm font-medium">
+                              {message.type === 'email' ? 'From:' : 'Phone:'} 
+                            </span>
+                            <span className="text-sm text-gray-600 ml-2">
+                              {message.type === 'email' ? message.from_email : message.phone_number}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium">Message:</span>
+                            <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">
+                              {message.type === 'email' ? message.content : message.message_content}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="text-center py-8">
+                    <p className="text-gray-500">No messages found</p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
             <TabsContent value="itineraries" className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Customer Itineraries</h3>
