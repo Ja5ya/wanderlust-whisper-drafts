@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
 import CustomerCalendar from "./CustomerCalendar";
 
 interface Customer {
@@ -23,20 +25,53 @@ interface Customer {
   value: number;
 }
 
+interface CustomerWithBooking extends Customer {
+  next_booking?: {
+    start_date: string;
+    end_date: string;
+    destination: string;
+  };
+}
+
 const CustomerList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const navigate = useNavigate();
 
   const { data: customers = [], isLoading, error } = useQuery({
-    queryKey: ['customers'],
+    queryKey: ['customers-with-bookings'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      console.log('Fetching customers with bookings...');
+      const { data: customersData, error: customersError } = await supabase
         .from('customers')
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data as Customer[];
+      if (customersError) throw customersError;
+
+      // Fetch next booking for each customer
+      const customersWithBookings: CustomerWithBooking[] = await Promise.all(
+        customersData.map(async (customer) => {
+          const { data: bookings, error: bookingsError } = await supabase
+            .from('bookings')
+            .select('start_date, end_date, destination')
+            .eq('customer_id', customer.id)
+            .gte('start_date', new Date().toISOString().split('T')[0]) // Future bookings only
+            .order('start_date', { ascending: true })
+            .limit(1);
+
+          if (bookingsError) {
+            console.error('Error fetching bookings for customer:', customer.id, bookingsError);
+          }
+
+          return {
+            ...customer,
+            next_booking: bookings && bookings.length > 0 ? bookings[0] : undefined
+          } as CustomerWithBooking;
+        })
+      );
+
+      console.log('Customers with bookings:', customersWithBookings);
+      return customersWithBookings;
     },
   });
 
@@ -77,6 +112,12 @@ const CustomerList = () => {
     } else {
       return 'Just now';
     }
+  };
+
+  const formatTravelDates = (booking: { start_date: string; end_date: string }) => {
+    const startDate = parseISO(booking.start_date);
+    const endDate = parseISO(booking.end_date);
+    return `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d, yyyy')}`;
   };
 
   if (isLoading) {
@@ -154,16 +195,23 @@ const CustomerList = () => {
                           <div className="space-y-1">
                             <div className="flex items-center space-x-2">
                               <h3 className="font-semibold">{customer.name}</h3>
-                              <Badge className={getStatusColor(customer.status)}>
-                                {customer.status}
-                              </Badge>
+                              <div className="flex items-center space-x-2">
+                                <Badge className={getStatusColor(customer.status)}>
+                                  {customer.status}
+                                </Badge>
+                                {customer.next_booking && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {formatTravelDates(customer.next_booking)}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                             <p className="text-sm text-muted-foreground">{customer.email}</p>
                             
                             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                               <div className="flex items-center space-x-1">
                                 <MapPin className="h-3 w-3" />
-                                <span>{customer.destination || 'No destination set'}</span>
+                                <span>{customer.next_booking?.destination || customer.destination || 'No destination set'}</span>
                               </div>
                               <div className="flex items-center space-x-1">
                                 <Calendar className="h-3 w-3" />

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +30,7 @@ const CustomerCalendar = () => {
   const { data: bookings = [], isLoading } = useQuery({
     queryKey: ['calendar-bookings'],
     queryFn: async () => {
+      console.log('Fetching bookings for calendar...');
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -40,15 +40,20 @@ const CustomerCalendar = () => {
           end_date,
           destination,
           status,
-          customer:customers(name)
+          customers!inner(name)
         `)
         .order('start_date', { ascending: true });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching bookings:', error);
+        throw error;
+      }
+      
+      console.log('Fetched bookings:', data);
       return data.map(booking => ({
         id: booking.id,
         customer_id: booking.customer_id,
-        customer_name: booking.customer?.name || 'Unknown',
+        customer_name: booking.customers?.name || 'Unknown',
         destination: booking.destination,
         start_date: booking.start_date,
         end_date: booking.end_date,
@@ -89,10 +94,10 @@ const CustomerCalendar = () => {
   };
 
   const handleEventClick = (event: BookingEvent) => {
-    navigate(`/customer-details?id=${event.customer_id}`);
+    navigate(`/customer/${event.customer_id}`);
   };
 
-  const getCalendarDays = () => {
+  function getCalendarDays() {
     if (view === 'week') {
       const start = startOfWeek(currentDate, { weekStartsOn: 1 });
       const end = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -102,15 +107,15 @@ const CustomerCalendar = () => {
       const end = endOfWeek(endOfMonth(currentDate), { weekStartsOn: 1 });
       return eachDayOfInterval({ start, end });
     }
-  };
+  }
 
-  const navigateCalendar = (direction: 'prev' | 'next') => {
+  function navigateCalendar(direction: 'prev' | 'next') {
     if (view === 'week') {
       setCurrentDate(direction === 'next' ? addWeeks(currentDate, 1) : subWeeks(currentDate, 1));
     } else {
       setCurrentDate(direction === 'next' ? addMonths(currentDate, 1) : subMonths(currentDate, 1));
     }
-  };
+  }
 
   const calendarDays = getCalendarDays();
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : [];
@@ -137,7 +142,7 @@ const CustomerCalendar = () => {
             <div>
               <CardTitle>Customer Travel Calendar</CardTitle>
               <CardDescription>
-                View all customer travel dates and bookings
+                View all customer travel dates and bookings ({bookings.length} bookings found)
               </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
