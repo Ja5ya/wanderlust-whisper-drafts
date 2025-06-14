@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,16 +10,19 @@ import CustomerList from "@/components/CustomerList";
 import AITrainingSettings from "@/components/AITrainingSettings";
 import BusinessAnalytics from "@/components/BusinessAnalytics";
 import RoutePlanning from "@/components/RoutePlanning";
-import BookingManagement from "@/components/BookingManagement";
 import ItineraryManagement from "@/components/ItineraryManagement";
-import HotelManagement from "@/components/HotelManagement";
-import GuideManagement from "@/components/GuideManagement";
+import BackOffice from "@/components/BackOffice";
 import { useUnreadEmailCount } from "@/hooks/useMessages";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useSampleData } from "@/hooks/useSampleData";
 
 const Dashboard = () => {
   const [isTrainingSettingsOpen, setIsTrainingSettingsOpen] = useState(false);
+  const [isBackOfficeOpen, setIsBackOfficeOpen] = useState(false);
+
+  // Initialize sample data
+  useSampleData();
 
   const { data: unreadEmailCount = 0 } = useUnreadEmailCount();
 
@@ -81,6 +83,20 @@ const Dashboard = () => {
                     <DialogTitle>AI Training Settings</DialogTitle>
                   </DialogHeader>
                   <AITrainingSettings />
+                </DialogContent>
+              </Dialog>
+              <Dialog open={isBackOfficeOpen} onOpenChange={setIsBackOfficeOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Hotel className="h-4 w-4 mr-2" />
+                    Back Office
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Back Office Management</DialogTitle>
+                  </DialogHeader>
+                  <BackOffice />
                 </DialogContent>
               </Dialog>
               <Button variant="outline">Settings</Button>
@@ -146,13 +162,10 @@ const Dashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="new-messages" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="new-messages">Messages</TabsTrigger>
             <TabsTrigger value="customers">Customers</TabsTrigger>
             <TabsTrigger value="itineraries">Itineraries</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="hotels">Hotels</TabsTrigger>
-            <TabsTrigger value="guides">Guides</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
@@ -166,18 +179,6 @@ const Dashboard = () => {
 
           <TabsContent value="itineraries">
             <ItineraryManagement />
-          </TabsContent>
-
-          <TabsContent value="bookings">
-            <BookingManagement />
-          </TabsContent>
-
-          <TabsContent value="hotels">
-            <HotelManagement />
-          </TabsContent>
-
-          <TabsContent value="guides">
-            <GuideManagement />
           </TabsContent>
 
           <TabsContent value="analytics">
