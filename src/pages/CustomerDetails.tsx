@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,69 +16,98 @@ const CustomerDetails = () => {
   const { customerId } = useParams();
   const [notes, setNotes] = useState("");
 
-  const { data: customer, isLoading } = useQuery({
+  console.log('CustomerDetails - customerId:', customerId);
+
+  const { data: customer, isLoading: customerLoading, error: customerError } = useQuery({
     queryKey: ['customer-details', customerId],
     queryFn: async () => {
-      if (!customerId) throw new Error('No customer ID provided');
+      if (!customerId) {
+        console.error('No customer ID provided');
+        throw new Error('No customer ID provided');
+      }
       
+      console.log('Fetching customer details for ID:', customerId);
       const { data, error } = await supabase
         .from('customers')
         .select('*')
         .eq('id', customerId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching customer:', error);
+        throw error;
+      }
+      
+      console.log('Customer data fetched:', data);
       return data;
     },
     enabled: !!customerId,
   });
 
-  const { data: bookings = [] } = useQuery({
+  const { data: bookings = [], isLoading: bookingsLoading } = useQuery({
     queryKey: ['customer-bookings', customerId],
     queryFn: async () => {
       if (!customerId) return [];
       
+      console.log('Fetching bookings for customer:', customerId);
       const { data, error } = await supabase
         .from('bookings')
         .select('*')
         .eq('customer_id', customerId)
         .order('start_date', { ascending: true });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching bookings:', error);
+        throw error;
+      }
+      
+      console.log('Bookings data fetched:', data);
       return data;
     },
     enabled: !!customerId,
   });
 
-  const { data: emails = [] } = useQuery({
+  const { data: emails = [], isLoading: emailsLoading } = useQuery({
     queryKey: ['customer-emails', customerId],
     queryFn: async () => {
       if (!customerId) return [];
       
+      console.log('Fetching emails for customer:', customerId);
       const { data, error } = await supabase
         .from('email_messages')
         .select('*')
         .eq('customer_id', customerId)
         .order('timestamp', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching emails:', error);
+        throw error;
+      }
+      
+      console.log('Emails data fetched:', data);
       return data;
     },
     enabled: !!customerId,
   });
 
-  const { data: whatsappMessages = [] } = useQuery({
+  const { data: whatsappMessages = [], isLoading: whatsappLoading } = useQuery({
     queryKey: ['customer-whatsapp', customerId],
     queryFn: async () => {
       if (!customerId) return [];
       
+      console.log('Fetching WhatsApp messages for customer:', customerId);
       const { data, error } = await supabase
         .from('whatsapp_messages')
         .select('*')
         .eq('customer_id', customerId)
         .order('timestamp', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching WhatsApp messages:', error);
+        throw error;
+      }
+      
+      console.log('WhatsApp messages data fetched:', data);
       return data;
     },
     enabled: !!customerId,
@@ -110,6 +138,28 @@ const CustomerDetails = () => {
       default: return "bg-gray-100 text-gray-800";
     }
   };
+
+  const isLoading = customerLoading || bookingsLoading || emailsLoading || whatsappLoading;
+
+  if (customerError) {
+    console.error('Customer error:', customerError);
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <div className="text-red-400 mb-4">Error loading customer details</div>
+            <p className="text-sm text-muted-foreground">
+              {customerError instanceof Error ? customerError.message : 'Unknown error occurred'}
+            </p>
+            <Button onClick={goBack} className="mt-4">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Customers
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading || !customer) {
     return (
