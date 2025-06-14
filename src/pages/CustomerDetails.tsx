@@ -6,11 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Mail, Phone, MapPin, Calendar, Users, Plus, DollarSign, Clock, Star, MessageSquare } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Calendar, Users, Plus, DollarSign, Clock, Star, MessageSquare, Grid, List } from "lucide-react";
 import { format, parseISO, differenceInDays } from "date-fns";
+import { useState } from "react";
+import EmailTab from "@/components/EmailTab";
+import WhatsAppTab from "@/components/WhatsAppTab";
 
 const CustomerDetails = () => {
   const { id } = useParams();
+  const [itineraryView, setItineraryView] = useState<'grid' | 'list'>('grid');
 
   const { data: customer, isLoading: customerLoading } = useQuery({
     queryKey: ['customer', id],
@@ -311,7 +315,7 @@ const CustomerDetails = () => {
           </Card>
         </div>
 
-        {/* Main Content - Enhanced with Messages tab */}
+        {/* Main Content - Enhanced with Email/WhatsApp tabs */}
         <div className="lg:col-span-3">
           <Tabs defaultValue="messages" className="space-y-6">
             <TabsList className="grid w-full grid-cols-4">
@@ -326,108 +330,110 @@ const CustomerDetails = () => {
                 <h3 className="text-lg font-semibold">Messages</h3>
               </div>
 
-              {(customerEmails.length > 0 || customerWhatsApp.length > 0) ? (
-                <div className="space-y-4">
-                  {/* Combine and sort all messages */}
-                  {[...customerEmails.map(email => ({...email, type: 'email'})), 
-                    ...customerWhatsApp.map(msg => ({...msg, type: 'whatsapp'}))]
-                    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                    .map((message: any) => (
-                    <Card key={`${message.type}-${message.id}`} className="hover:shadow-md transition-shadow">
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-center space-x-2">
-                            {message.type === 'email' ? (
-                              <Mail className="h-4 w-4 text-blue-500" />
-                            ) : (
-                              <MessageSquare className="h-4 w-4 text-green-500" />
-                            )}
-                            <CardTitle className="text-lg">
-                              {message.type === 'email' ? message.subject : 'WhatsApp Message'}
-                            </CardTitle>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge variant={message.is_read ? 'secondary' : 'default'}>
-                              {message.is_read ? 'Read' : 'Unread'}
-                            </Badge>
-                            <span className="text-sm text-gray-500">
-                              {format(parseISO(message.timestamp), 'MMM d, yyyy HH:mm')}
-                            </span>
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div>
-                            <span className="text-sm font-medium">
-                              {message.type === 'email' ? 'From:' : 'Phone:'} 
-                            </span>
-                            <span className="text-sm text-gray-600 ml-2">
-                              {message.type === 'email' ? message.from_email : message.phone_number}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-sm font-medium">Message:</span>
-                            <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">
-                              {message.type === 'email' ? message.content : message.message_content}
-                            </p>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <Card>
-                  <CardContent className="text-center py-8">
-                    <p className="text-gray-500">No messages found</p>
-                  </CardContent>
-                </Card>
-              )}
+              <Tabs defaultValue="email" className="space-y-4">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="email">Email</TabsTrigger>
+                  <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="email">
+                  <EmailTab 
+                    customerEmails={customerEmails} 
+                    customerId={id!}
+                    customerName={customer.name}
+                  />
+                </TabsContent>
+
+                <TabsContent value="whatsapp">
+                  <WhatsAppTab 
+                    customerWhatsApp={customerWhatsApp}
+                    customerId={id!}
+                    customerName={customer.name}
+                  />
+                </TabsContent>
+              </Tabs>
             </TabsContent>
 
             <TabsContent value="itineraries" className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Customer Itineraries</h3>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Itinerary
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <div className="flex border rounded-lg p-1">
+                    <Button
+                      variant={itineraryView === 'grid' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setItineraryView('grid')}
+                    >
+                      <Grid className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={itineraryView === 'list' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setItineraryView('list')}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Itinerary
+                  </Button>
+                </div>
               </div>
 
               {customerItineraries.length > 0 ? (
-                <div className="grid gap-4">
+                <div className={itineraryView === 'grid' ? 'grid gap-4' : 'space-y-2'}>
                   {customerItineraries.map((itinerary: any) => (
-                    <Card key={itinerary.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader>
-                        <div className="flex justify-between items-start">
-                          <CardTitle className="text-lg">{itinerary.title}</CardTitle>
-                          <Badge variant={itinerary.status === 'Draft' ? 'secondary' : 'default'}>
-                            {itinerary.status}
-                          </Badge>
+                    <Card key={itinerary.id} className={`hover:shadow-md transition-shadow ${itineraryView === 'list' ? 'p-4' : ''}`}>
+                      {itineraryView === 'grid' ? (
+                        <>
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <CardTitle className="text-lg">{itinerary.title}</CardTitle>
+                              <Badge variant={itinerary.status === 'Draft' ? 'secondary' : 'default'}>
+                                {itinerary.status}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="grid md:grid-cols-3 gap-4">
+                              <div>
+                                <span className="text-sm font-medium">Duration:</span>
+                                <p className="text-sm text-gray-600">{itinerary.total_days} days</p>
+                              </div>
+                              <div>
+                                <span className="text-sm font-medium">Participants:</span>
+                                <p className="text-sm text-gray-600">{itinerary.total_participants || 'Not specified'}</p>
+                              </div>
+                              <div>
+                                <span className="text-sm font-medium">Budget:</span>
+                                <p className="text-sm text-gray-600">
+                                  {itinerary.budget ? `${itinerary.currency} ${itinerary.budget}` : 'Not specified'}
+                                </p>
+                              </div>
+                            </div>
+                            {itinerary.description && (
+                              <p className="text-sm text-gray-600 mt-3">{itinerary.description}</p>
+                            )}
+                          </CardContent>
+                        </>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-4">
+                              <h4 className="font-medium">{itinerary.title}</h4>
+                              <Badge variant={itinerary.status === 'Draft' ? 'secondary' : 'default'} className="text-xs">
+                                {itinerary.status}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center space-x-6 mt-1 text-sm text-gray-600">
+                              <span>{itinerary.total_days} days</span>
+                              <span>{itinerary.total_participants || 'N/A'} participants</span>
+                              <span>{itinerary.budget ? `${itinerary.currency} ${itinerary.budget}` : 'No budget'}</span>
+                            </div>
+                          </div>
                         </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid md:grid-cols-3 gap-4">
-                          <div>
-                            <span className="text-sm font-medium">Duration:</span>
-                            <p className="text-sm text-gray-600">{itinerary.total_days} days</p>
-                          </div>
-                          <div>
-                            <span className="text-sm font-medium">Participants:</span>
-                            <p className="text-sm text-gray-600">{itinerary.total_participants || 'Not specified'}</p>
-                          </div>
-                          <div>
-                            <span className="text-sm font-medium">Budget:</span>
-                            <p className="text-sm text-gray-600">
-                              {itinerary.budget ? `${itinerary.currency} ${itinerary.budget}` : 'Not specified'}
-                            </p>
-                          </div>
-                        </div>
-                        {itinerary.description && (
-                          <p className="text-sm text-gray-600 mt-3">{itinerary.description}</p>
-                        )}
-                      </CardContent>
+                      )}
                     </Card>
                   ))}
                 </div>

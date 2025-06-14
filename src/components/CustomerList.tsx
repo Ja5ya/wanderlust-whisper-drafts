@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Search, Plus, Users, Phone, Mail, MapPin, Calendar, Eye } from "lucide-react";
+import { Search, Plus, Users, Phone, Mail, MapPin, Calendar, Eye, Grid, List } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -30,6 +30,7 @@ interface Customer {
 
 const CustomerList = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [customerView, setCustomerView] = useState<'grid' | 'list'>('grid');
   const navigate = useNavigate();
 
   const { data: customers = [], isLoading } = useQuery({
@@ -89,89 +90,142 @@ const CustomerList = () => {
         </Dialog>
       </div>
 
-      <div className="flex items-center space-x-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search customers..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search customers..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <Users className="h-4 w-4" />
+            <span>{filteredCustomers.length} customers</span>
+          </div>
         </div>
-        <div className="flex items-center space-x-2 text-sm text-gray-600">
-          <Users className="h-4 w-4" />
-          <span>{filteredCustomers.length} customers</span>
+        
+        <div className="flex border rounded-lg p-1">
+          <Button
+            variant={customerView === 'grid' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setCustomerView('grid')}
+          >
+            <Grid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={customerView === 'list' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setCustomerView('list')}
+          >
+            <List className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
       {isLoading ? (
         <div className="text-center py-8">Loading customers...</div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className={customerView === 'grid' ? 'grid gap-4 md:grid-cols-2 lg:grid-cols-3' : 'space-y-2'}>
           {filteredCustomers.map((customer) => (
-            <Card key={customer.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{customer.name}</CardTitle>
-                  <Badge className={getStatusColor(customer.status)}>
-                    {customer.status}
-                  </Badge>
+            <Card key={customer.id} className={`hover:shadow-md transition-shadow ${customerView === 'list' ? 'p-4' : ''}`}>
+              {customerView === 'grid' ? (
+                <>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-lg">{customer.name}</CardTitle>
+                      <Badge className={getStatusColor(customer.status)}>
+                        {customer.status}
+                      </Badge>
+                    </div>
+                    <CardDescription>{customer.email}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {customer.phone && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Phone className="h-4 w-4 mr-2" />
+                          {customer.phone}
+                        </div>
+                      )}
+                      {customer.destination && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <MapPin className="h-4 w-4 mr-2" />
+                          {customer.destination}
+                        </div>
+                      )}
+                      {customer.start_date && customer.end_date && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          {new Date(customer.start_date).toLocaleDateString()} - {new Date(customer.end_date).toLocaleDateString()}
+                        </div>
+                      )}
+                      {customer.trip_type && (
+                        <div className="text-sm text-gray-600">
+                          <strong>Type:</strong> {customer.trip_type}
+                        </div>
+                      )}
+                      {customer.number_of_people && (
+                        <div className="text-sm text-gray-600">
+                          <strong>Travelers:</strong> {customer.number_of_people}
+                        </div>
+                      )}
+                      {customer.value && (
+                        <div className="text-sm font-semibold text-green-600">
+                          Estimated Value: ${customer.value.toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1"
+                        onClick={() => handleViewDetails(customer.id)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View Details
+                      </Button>
+                      <Button size="sm" className="flex-1">
+                        <Mail className="h-4 w-4 mr-1" />
+                        Email
+                      </Button>
+                    </div>
+                  </CardContent>
+                </>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-4">
+                      <h4 className="font-medium">{customer.name}</h4>
+                      <Badge className={getStatusColor(customer.status)} size="sm">
+                        {customer.status}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center space-x-6 mt-1 text-sm text-gray-600">
+                      <span>{customer.email}</span>
+                      {customer.destination && <span>{customer.destination}</span>}
+                      {customer.value && <span className="text-green-600 font-medium">${customer.value.toLocaleString()}</span>}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleViewDetails(customer.id)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      View Details
+                    </Button>
+                    <Button size="sm">
+                      <Mail className="h-4 w-4 mr-1" />
+                      Email
+                    </Button>
+                  </div>
                 </div>
-                <CardDescription>{customer.email}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {customer.phone && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Phone className="h-4 w-4 mr-2" />
-                      {customer.phone}
-                    </div>
-                  )}
-                  {customer.destination && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <MapPin className="h-4 w-4 mr-2" />
-                      {customer.destination}
-                    </div>
-                  )}
-                  {customer.start_date && customer.end_date && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      {new Date(customer.start_date).toLocaleDateString()} - {new Date(customer.end_date).toLocaleDateString()}
-                    </div>
-                  )}
-                  {customer.trip_type && (
-                    <div className="text-sm text-gray-600">
-                      <strong>Type:</strong> {customer.trip_type}
-                    </div>
-                  )}
-                  {customer.number_of_people && (
-                    <div className="text-sm text-gray-600">
-                      <strong>Travelers:</strong> {customer.number_of_people}
-                    </div>
-                  )}
-                  {customer.value && (
-                    <div className="text-sm font-semibold text-green-600">
-                      Estimated Value: ${customer.value.toLocaleString()}
-                    </div>
-                  )}
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="flex-1"
-                    onClick={() => handleViewDetails(customer.id)}
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    View Details
-                  </Button>
-                  <Button size="sm" className="flex-1">
-                    <Mail className="h-4 w-4 mr-1" />
-                    Email
-                  </Button>
-                </div>
-              </CardContent>
+              )}
             </Card>
           ))}
         </div>
