@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency } from "@/lib/utils";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isToday, isFuture, isPast } from "date-fns";
 import CustomerCalendar from "./CustomerCalendar";
 
 interface Customer {
@@ -30,7 +30,9 @@ interface CustomerWithBooking extends Customer {
     start_date: string;
     end_date: string;
     destination: string;
+    status: string;
   };
+  calculated_status: string;
 }
 
 const CustomerList = () => {
@@ -53,7 +55,7 @@ const CustomerList = () => {
         customersData.map(async (customer) => {
           const { data: bookings, error: bookingsError } = await supabase
             .from('bookings')
-            .select('start_date, end_date, destination')
+            .select('start_date, end_date, destination, status')
             .eq('customer_id', customer.id)
             .gte('start_date', new Date().toISOString().split('T')[0]) // Future bookings only
             .order('start_date', { ascending: true })
@@ -63,9 +65,28 @@ const CustomerList = () => {
             console.error('Error fetching bookings for customer:', customer.id, bookingsError);
           }
 
+          const nextBooking = bookings && bookings.length > 0 ? bookings[0] : undefined;
+          
+          // Calculate status based on booking dates and confirmation
+          let calculatedStatus = customer.status;
+          if (nextBooking) {
+            const startDate = new Date(nextBooking.start_date);
+            const endDate = new Date(nextBooking.end_date);
+            const today = new Date();
+            
+            if (today >= startDate && today <= endDate) {
+              calculatedStatus = "Traveling";
+            } else if (isFuture(startDate)) {
+              calculatedStatus = nextBooking.status === 'Confirmed' ? "Active" : "Planning";
+            } else if (isPast(endDate)) {
+              calculatedStatus = "Completed";
+            }
+          }
+
           return {
             ...customer,
-            next_booking: bookings && bookings.length > 0 ? bookings[0] : undefined
+            next_booking: nextBooking,
+            calculated_status: calculatedStatus
           } as CustomerWithBooking;
         })
       );
@@ -196,8 +217,8 @@ const CustomerList = () => {
                             <div className="flex items-center space-x-2">
                               <h3 className="font-semibold">{customer.name}</h3>
                               <div className="flex items-center space-x-2">
-                                <Badge className={getStatusColor(customer.status)}>
-                                  {customer.status}
+                                <Badge className={getStatusColor(customer.calculated_status)}>
+                                  {customer.calculated_status}
                                 </Badge>
                                 {customer.next_booking && (
                                   <Badge variant="outline" className="text-xs">

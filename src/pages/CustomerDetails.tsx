@@ -7,101 +7,83 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Mail, Calendar, MapPin, Plane, Hotel, FileText, Download, Send, MessageSquare } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { format, parseISO } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 
 const CustomerDetails = () => {
-  const [notes, setNotes] = useState("VIP customer. Prefers luxury accommodations. Vegetarian dietary requirements. Celebrating 20th anniversary.");
+  const { customerId } = useParams();
+  const [notes, setNotes] = useState("");
 
-  const customer = {
-    name: "John Doe",
-    email: "john.doe@email.com",
-    phone: "+1 (555) 123-4567",
-    destination: "Bali, Indonesia",
-    tripType: "Family Vacation",
-    status: "Active",
-    value: "$12,500",
-    travelDates: "Dec 15-22, 2024"
-  };
+  const { data: customer, isLoading } = useQuery({
+    queryKey: ['customer-details', customerId],
+    queryFn: async () => {
+      if (!customerId) throw new Error('No customer ID provided');
+      
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customerId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!customerId,
+  });
 
-  const emails = [
-    {
-      date: "2024-01-15",
-      subject: "Bali Trip Inquiry - Family of 4",
-      type: "Inquiry",
-      status: "Responded"
+  const { data: bookings = [] } = useQuery({
+    queryKey: ['customer-bookings', customerId],
+    queryFn: async () => {
+      if (!customerId) return [];
+      
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('start_date', { ascending: true });
+      
+      if (error) throw error;
+      return data;
     },
-    {
-      date: "2024-01-14", 
-      subject: "Additional Questions about Activities",
-      type: "Follow-up",
-      status: "Responded"
-    },
-    {
-      date: "2024-01-12",
-      subject: "Flight Preferences",
-      type: "Information",
-      status: "Pending"
-    }
-  ];
+    enabled: !!customerId,
+  });
 
-  const whatsappMessages = [
-    {
-      date: "2024-01-15",
-      message: "Hi! I wanted to ask about changing our Bali hotel to a resort closer to the beach.",
-      type: "Request",
-      status: "Responded"
+  const { data: emails = [] } = useQuery({
+    queryKey: ['customer-emails', customerId],
+    queryFn: async () => {
+      if (!customerId) return [];
+      
+      const { data, error } = await supabase
+        .from('email_messages')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('timestamp', { ascending: false });
+      
+      if (error) throw error;
+      return data;
     },
-    {
-      date: "2024-01-13",
-      message: "Thank you for the itinerary! Looks perfect for our family.",
-      type: "Feedback", 
-      status: "Acknowledged"
-    }
-  ];
+    enabled: !!customerId,
+  });
 
-  const routes = [
-    {
-      day: "Day 1",
-      location: "Arrival in Denpasar",
-      activities: "Airport transfer, Hotel check-in, Welcome dinner",
-      status: "Confirmed"
+  const { data: whatsappMessages = [] } = useQuery({
+    queryKey: ['customer-whatsapp', customerId],
+    queryFn: async () => {
+      if (!customerId) return [];
+      
+      const { data, error } = await supabase
+        .from('whatsapp_messages')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('timestamp', { ascending: false });
+      
+      if (error) throw error;
+      return data;
     },
-    {
-      day: "Day 2",
-      location: "Ubud Cultural Tour",
-      activities: "Rice terraces, Monkey Forest, Traditional market",
-      status: "Confirmed"
-    },
-    {
-      day: "Day 3",
-      location: "Beach Day - Seminyak",
-      activities: "Beach activities, Spa treatment, Sunset dinner",
-      status: "Confirmed"
-    }
-  ];
-
-  const bookings = [
-    {
-      type: "Flight",
-      details: "JFK → DPS (Emirates)",
-      date: "Dec 15, 2024",
-      status: "Confirmed",
-      amount: "$2,400"
-    },
-    {
-      type: "Hotel",
-      details: "Four Seasons Resort Bali",
-      date: "Dec 15-22, 2024",
-      status: "Confirmed", 
-      amount: "$4,800"
-    },
-    {
-      type: "Activities",
-      details: "Cultural tours & experiences",
-      date: "Dec 16-21, 2024",
-      status: "Confirmed",
-      amount: "$1,200"
-    }
-  ];
+    enabled: !!customerId,
+  });
 
   const goBack = () => {
     window.history.back();
@@ -119,6 +101,31 @@ const CustomerDetails = () => {
     console.log("Sending tour details to guide...");
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "Active": return "bg-green-100 text-green-800";
+      case "Planning": return "bg-blue-100 text-blue-800";
+      case "Traveling": return "bg-orange-100 text-orange-800";
+      case "Completed": return "bg-gray-100 text-gray-800";
+      default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  if (isLoading || !customer) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <div className="text-gray-400 mb-4">Loading customer details...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const nextBooking = bookings.find(booking => new Date(booking.start_date) >= new Date());
+  const totalCommunications = emails.length + whatsappMessages.length;
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
@@ -131,7 +138,7 @@ const CustomerDetails = () => {
             </Button>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{customer.name}</h1>
-              <p className="text-gray-600">{customer.email} • {customer.phone}</p>
+              <p className="text-gray-600">{customer.email} • {customer.phone || 'No phone'}</p>
             </div>
           </div>
           <div className="flex space-x-4">
@@ -147,7 +154,7 @@ const CustomerDetails = () => {
               <Send className="h-4 w-4 mr-2" />
               Send to Guide
             </Button>
-            <Badge className={`px-3 py-1 ${customer.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+            <Badge className={getStatusColor(customer.status)}>
               {customer.status}
             </Badge>
           </div>
@@ -161,8 +168,8 @@ const CustomerDetails = () => {
               <MapPin className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{customer.destination}</div>
-              <p className="text-xs text-muted-foreground">{customer.tripType}</p>
+              <div className="text-2xl font-bold">{customer.destination || 'No destination'}</div>
+              <p className="text-xs text-muted-foreground">{customer.trip_type || 'No trip type'}</p>
             </CardContent>
           </Card>
 
@@ -172,8 +179,15 @@ const CustomerDetails = () => {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-lg font-bold">{customer.travelDates}</div>
-              <p className="text-xs text-muted-foreground">8 days total</p>
+              <div className="text-lg font-bold">
+                {nextBooking 
+                  ? `${format(parseISO(nextBooking.start_date), 'MMM d')} - ${format(parseISO(nextBooking.end_date), 'MMM d, yyyy')}`
+                  : 'No upcoming trips'
+                }
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {nextBooking ? `${Math.ceil((new Date(nextBooking.end_date).getTime() - new Date(nextBooking.start_date).getTime()) / (1000 * 60 * 60 * 24))} days total` : ''}
+              </p>
             </CardContent>
           </Card>
 
@@ -183,7 +197,9 @@ const CustomerDetails = () => {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{customer.value}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {customer.value ? formatCurrency(customer.value) : 'TBD'}
+              </div>
               <p className="text-xs text-muted-foreground">All inclusive</p>
             </CardContent>
           </Card>
@@ -194,7 +210,7 @@ const CustomerDetails = () => {
               <MessageSquare className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{emails.length + whatsappMessages.length}</div>
+              <div className="text-2xl font-bold">{totalCommunications}</div>
               <p className="text-xs text-muted-foreground">Total interactions</p>
             </CardContent>
           </Card>
@@ -223,23 +239,30 @@ const CustomerDetails = () => {
                     <TableBody>
                       <TableRow>
                         <TableCell className="font-medium">Destination</TableCell>
-                        <TableCell>{customer.destination}</TableCell>
+                        <TableCell>{customer.destination || 'Not set'}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell className="font-medium">Trip Type</TableCell>
-                        <TableCell>{customer.tripType}</TableCell>
+                        <TableCell>{customer.trip_type || 'Not set'}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell className="font-medium">Duration</TableCell>
-                        <TableCell>8 days, 7 nights</TableCell>
+                        <TableCell>
+                          {nextBooking 
+                            ? `${Math.ceil((new Date(nextBooking.end_date).getTime() - new Date(nextBooking.start_date).getTime()) / (1000 * 60 * 60 * 24))} days`
+                            : 'Not set'
+                          }
+                        </TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell className="font-medium">Travelers</TableCell>
-                        <TableCell>4 (2 adults, 2 children)</TableCell>
+                        <TableCell className="font-medium">Status</TableCell>
+                        <TableCell>{customer.status}</TableCell>
                       </TableRow>
                       <TableRow>
                         <TableCell className="font-medium">Total Value</TableCell>
-                        <TableCell className="text-green-600 font-semibold">{customer.value}</TableCell>
+                        <TableCell className="text-green-600 font-semibold">
+                          {customer.value ? formatCurrency(customer.value) : 'TBD'}
+                        </TableCell>
                       </TableRow>
                     </TableBody>
                   </Table>
@@ -253,30 +276,23 @@ const CustomerDetails = () => {
                 <CardContent>
                   <Table>
                     <TableBody>
-                      <TableRow>
-                        <TableCell className="font-medium">Flights</TableCell>
-                        <TableCell>
-                          <Badge className="bg-green-100 text-green-800">Confirmed</Badge>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">Accommodation</TableCell>
-                        <TableCell>
-                          <Badge className="bg-green-100 text-green-800">Confirmed</Badge>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">Activities</TableCell>
-                        <TableCell>
-                          <Badge className="bg-green-100 text-green-800">Confirmed</Badge>
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-medium">Transfers</TableCell>
-                        <TableCell>
-                          <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>
-                        </TableCell>
-                      </TableRow>
+                      {bookings.map((booking) => (
+                        <TableRow key={booking.id}>
+                          <TableCell className="font-medium">{booking.destination}</TableCell>
+                          <TableCell>
+                            <Badge className={booking.status === 'Confirmed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                              {booking.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {bookings.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={2} className="text-center text-muted-foreground">
+                            No bookings found
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
@@ -297,27 +313,30 @@ const CustomerDetails = () => {
                       <TableRow>
                         <TableHead>Date</TableHead>
                         <TableHead>Subject</TableHead>
-                        <TableHead>Type</TableHead>
+                        <TableHead>From</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {emails.map((email, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{email.date}</TableCell>
+                      {emails.map((email) => (
+                        <TableRow key={email.id}>
+                          <TableCell>{format(parseISO(email.timestamp), 'MMM d, yyyy')}</TableCell>
                           <TableCell>{email.subject}</TableCell>
-                          <TableCell>{email.type}</TableCell>
+                          <TableCell>{email.from_email}</TableCell>
                           <TableCell>
-                            <Badge variant={email.status === 'Responded' ? 'default' : 'secondary'}>
-                              {email.status}
+                            <Badge variant={email.is_read ? 'default' : 'secondary'}>
+                              {email.is_read ? 'Read' : 'Unread'}
                             </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="outline" size="sm">View</Button>
                           </TableCell>
                         </TableRow>
                       ))}
+                      {emails.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground">
+                            No emails found
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
@@ -334,25 +353,30 @@ const CustomerDetails = () => {
                       <TableRow>
                         <TableHead>Date</TableHead>
                         <TableHead>Message</TableHead>
-                        <TableHead>Type</TableHead>
+                        <TableHead>Direction</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {whatsappMessages.map((msg, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{msg.date}</TableCell>
-                          <TableCell className="max-w-xs truncate">{msg.message}</TableCell>
-                          <TableCell>{msg.type}</TableCell>
+                      {whatsappMessages.map((msg) => (
+                        <TableRow key={msg.id}>
+                          <TableCell>{format(parseISO(msg.timestamp), 'MMM d, yyyy')}</TableCell>
+                          <TableCell className="max-w-xs truncate">{msg.message_content}</TableCell>
+                          <TableCell>{msg.is_incoming ? 'Incoming' : 'Outgoing'}</TableCell>
                           <TableCell>
-                            <Badge variant="default">{msg.status}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button variant="outline" size="sm">View</Button>
+                            <Badge variant={msg.is_read ? 'default' : 'secondary'}>
+                              {msg.is_read ? 'Read' : 'Unread'}
+                            </Badge>
                           </TableCell>
                         </TableRow>
                       ))}
+                      {whatsappMessages.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground">
+                            No WhatsApp messages found
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
@@ -367,30 +391,9 @@ const CustomerDetails = () => {
                 <CardDescription>Day-by-day travel plan</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Day</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Activities</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {routes.map((route, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{route.day}</TableCell>
-                        <TableCell>{route.location}</TableCell>
-                        <TableCell>{route.activities}</TableCell>
-                        <TableCell>
-                          <Badge className="bg-green-100 text-green-800">
-                            {route.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">Route planning feature coming soon</p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -405,20 +408,20 @@ const CustomerDetails = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Details</TableHead>
-                      <TableHead>Date</TableHead>
+                      <TableHead>Destination</TableHead>
+                      <TableHead>Start Date</TableHead>
+                      <TableHead>End Date</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {bookings.map((booking, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{booking.type}</TableCell>
-                        <TableCell>{booking.details}</TableCell>
-                        <TableCell>{booking.date}</TableCell>
-                        <TableCell className="font-semibold">{booking.amount}</TableCell>
+                    {bookings.map((booking) => (
+                      <TableRow key={booking.id}>
+                        <TableCell className="font-medium">{booking.destination}</TableCell>
+                        <TableCell>{format(parseISO(booking.start_date), 'MMM d, yyyy')}</TableCell>
+                        <TableCell>{format(parseISO(booking.end_date), 'MMM d, yyyy')}</TableCell>
+                        <TableCell className="font-semibold">{formatCurrency(booking.total_amount)}</TableCell>
                         <TableCell>
                           <Badge className="bg-green-100 text-green-800">
                             {booking.status}
@@ -426,6 +429,13 @@ const CustomerDetails = () => {
                         </TableCell>
                       </TableRow>
                     ))}
+                    {bookings.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground">
+                          No bookings found
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>
