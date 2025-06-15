@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,7 @@ const CustomerCalendar = () => {
           end_date,
           destination,
           status,
-          customers!inner(name)
+          customers!inner!customer_id(name)
         `)
         .order('start_date', { ascending: true });
       
