@@ -9,11 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Calendar, Users, DollarSign, MapPin, Search, RefreshCw, Check, Settings, MessageSquare } from "lucide-react";
+import { Plus, Calendar, Users, MapPin, Search, RefreshCw, Check, MessageSquare } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import SpeechToText from "./SpeechToText";
-import { usePricingCalculation } from "@/hooks/usePricingCalculation";
+import PricingBreakdown from "./PricingBreakdown";
+import TemplateButtons from "./TemplateButtons";
+import NotesSection from "./NotesSection";
 
 const ItineraryManagement = () => {
   const [selectedItinerary, setSelectedItinerary] = useState<any>(null);
@@ -73,12 +75,6 @@ const ItineraryManagement = () => {
       return data;
     },
     enabled: !!selectedItinerary?.customer_id,
-  });
-
-  const { pricing, updatePricing } = usePricingCalculation({
-    itineraryId: selectedItinerary?.id,
-    totalDays: selectedItinerary?.total_days || 1,
-    totalParticipants: selectedItinerary?.total_participants || 1
   });
 
   // Filter and sort itineraries
@@ -297,7 +293,6 @@ EXCLUDED SERVICES:
                       
                       {itinerary.budget && (
                         <div className="flex items-center space-x-1">
-                          <DollarSign className="h-3 w-3" />
                           <span>${itinerary.budget.toLocaleString()}</span>
                         </div>
                       )}
@@ -364,6 +359,7 @@ EXCLUDED SERVICES:
                   <div className="flex items-center justify-between">
                     <CardTitle>AI Generated Itinerary</CardTitle>
                     <div className="flex items-center space-x-2">
+                      <TemplateButtons />
                       {draftItinerary && (
                         <Button
                           variant="outline"
@@ -432,87 +428,17 @@ EXCLUDED SERVICES:
               </Card>
 
               {/* Enhanced Price Breakdown */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Price Breakdown & Calculation
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="hotels">Hotels ({Math.max(0, selectedItinerary.total_days - 1)} nights)</Label>
-                      <Input
-                        id="hotels"
-                        type="number"
-                        value={pricing.hotels}
-                        onChange={(e) => updatePricing('hotels', Number(e.target.value))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="transportation">Transportation ({selectedItinerary.total_days} days)</Label>
-                      <Input
-                        id="transportation"
-                        type="number"
-                        value={pricing.transportation}
-                        onChange={(e) => updatePricing('transportation', Number(e.target.value))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="activities">Activities (per person)</Label>
-                      <Input
-                        id="activities"
-                        type="number"
-                        value={pricing.activities}
-                        onChange={(e) => updatePricing('activities', Number(e.target.value))}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="guides">Guide Services ({selectedItinerary.total_days} days)</Label>
-                      <Input
-                        id="guides"
-                        type="number"
-                        value={pricing.guides}
-                        onChange={(e) => updatePricing('guides', Number(e.target.value))}
-                      />
-                    </div>
-                  </div>
+              <PricingBreakdown 
+                totalDays={selectedItinerary.total_days}
+                totalParticipants={selectedItinerary.total_participants || 1}
+              />
 
-                  <Separator />
-
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="profit-margin">Profit Margin (%)</Label>
-                      <Input
-                        id="profit-margin"
-                        type="number"
-                        value={pricing.profitMargin}
-                        onChange={(e) => updatePricing('profitMargin', Number(e.target.value))}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium">Subtotal:</span>
-                        <span className="font-medium">${pricing.totalCost.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm font-medium">Profit ({pricing.profitMargin}%):</span>
-                        <span className="font-medium text-green-600">${pricing.totalProfit.toLocaleString()}</span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between text-lg font-bold">
-                        <span>Total Price:</span>
-                        <span className="text-blue-600">${pricing.totalPrice.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="text-xs text-gray-500 mt-2">
-                    * Prices calculated from database rates and can be manually adjusted
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Notes Section */}
+              <NotesSection 
+                contextId={selectedItinerary.id}
+                contextType="itinerary"
+                title="Itinerary Notes"
+              />
 
               {/* Action Buttons */}
               {draftItinerary && (
