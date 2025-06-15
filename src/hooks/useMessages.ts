@@ -1,4 +1,3 @@
-
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,17 +22,47 @@ export const useEmailMessages = () => {
   return useQuery({
     queryKey: ['email-messages'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('email_messages')
-        .select(`
-          *,
-          customer:customers!customer_id(name, email)
-        `)
-        .order('timestamp', { ascending: false });
-      
-      if (error) throw error;
-      return data as EmailMessage[];
+      try {
+        const { data, error } = await supabase
+          .from('email_messages')
+          .select(`
+            id,
+            customer_id,
+            from_email,
+            to_email,
+            subject,
+            content,
+            is_read,
+            is_draft,
+            is_sent,
+            timestamp,
+            customers!email_messages_customer_id_fkey (
+              name,
+              email
+            )
+          `)
+          .order('timestamp', { ascending: false });
+        
+        if (error) {
+          console.error('Supabase error:', error);
+          throw new Error(`Database error: ${error.message}`);
+        }
+
+        if (!data) {
+          console.warn('No data returned from Supabase');
+          return [];
+        }
+
+        return data as EmailMessage[];
+      } catch (error) {
+        console.error('Error in useEmailMessages:', error);
+        throw error instanceof Error 
+          ? error 
+          : new Error('Failed to fetch email messages');
+      }
     },
+    retry: 1,
+    staleTime: 1000 * 60, // 1 minute
   });
 };
 
@@ -41,13 +70,26 @@ export const useUnreadEmailCount = () => {
   return useQuery({
     queryKey: ['unread-email-count'],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('email_messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_read', false);
-      
-      if (error) throw error;
-      return count || 0;
+      try {
+        const { count, error } = await supabase
+          .from('email_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_read', false);
+        
+        if (error) {
+          console.error('Supabase error:', error);
+          throw new Error(`Database error: ${error.message}`);
+        }
+
+        return count || 0;
+      } catch (error) {
+        console.error('Error in useUnreadEmailCount:', error);
+        throw error instanceof Error 
+          ? error 
+          : new Error('Failed to fetch unread email count');
+      }
     },
+    retry: 1,
+    staleTime: 1000 * 60, // 1 minute
   });
 };

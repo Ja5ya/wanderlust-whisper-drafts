@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +39,13 @@ const NewMessages = () => {
               <p className="text-sm text-muted-foreground">
                 {error instanceof Error ? error.message : 'Unknown error occurred'}
               </p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </Button>
             </div>
           </CardContent>
         </Card>
