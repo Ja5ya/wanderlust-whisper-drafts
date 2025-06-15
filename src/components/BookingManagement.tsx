@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Search, Filter, Mail, ExternalLink, Calendar, Hotel, Plane, Plus } from "lucide-react";
-import { useBookings, useUpdateBookingStatus } from "@/hooks/useBookings";
+import { useEnhancedBookings } from "@/hooks/useEnhancedBookings";
+import { useUpdateBookingStatus } from "@/hooks/useBookings";
 import CreateBookingForm from "./CreateBookingForm";
 
 const BookingManagement = () => {
@@ -16,8 +18,10 @@ const BookingManagement = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("status");
   
-  const { data: bookings = [], isLoading } = useBookings();
+  const { data: bookings = [], isLoading } = useEnhancedBookings();
   const updateBookingStatus = useUpdateBookingStatus();
+
+  console.log("Bookings data:", bookings);
 
   const emailTemplates = [
     {
@@ -170,8 +174,8 @@ const BookingManagement = () => {
                             <div className="text-gray-500">to {new Date(booking.end_date).toLocaleDateString()}</div>
                           </div>
                         </TableCell>
-                        <TableCell>{booking.number_of_guests}</TableCell>
-                        <TableCell className="font-semibold">${booking.total_amount?.toLocaleString()}</TableCell>
+                        <TableCell>{booking.number_of_guests || 'N/A'}</TableCell>
+                        <TableCell className="font-semibold">${booking.total_amount?.toLocaleString() || '0'}</TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(booking.status)}>
                             {booking.status}

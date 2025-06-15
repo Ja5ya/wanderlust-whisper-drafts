@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Mail, MoreHorizontal, Reply, Forward } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface EmailTabProps {
   searchTerm?: string;
@@ -39,10 +40,9 @@ const EmailTab = ({ searchTerm = "", customerEmails, customerId, customerName }:
       if (error) throw error;
       return data as EmailMessage[];
     },
-    enabled: !customerEmails, // Only fetch if customerEmails not provided
+    enabled: !customerEmails,
   });
 
-  // Use provided customerEmails or fetched allEmails
   const emails = customerEmails || allEmails;
 
   const filteredEmails = emails.filter(email =>
@@ -83,58 +83,71 @@ const EmailTab = ({ searchTerm = "", customerEmails, customerId, customerName }:
           {searchTerm ? 'No email messages found matching your search' : 'No email messages found'}
         </div>
       ) : (
-        filteredEmails.map((email) => (
-          <Card 
-            key={email.id} 
-            className={`cursor-pointer hover:shadow-md transition-shadow ${!email.is_read ? 'border-blue-200 bg-blue-50' : ''}`}
-            onClick={() => markAsRead(email.id)}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback>
-                      {email.from_email.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <CardTitle className="text-base">{email.from_email}</CardTitle>
-                      {!email.is_read && <Badge variant="secondary" className="text-xs">New</Badge>}
-                      {email.is_draft && <Badge variant="outline" className="text-xs">Draft</Badge>}
-                    </div>
-                    <CardDescription className="text-sm">{email.subject}</CardDescription>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>From</TableHead>
+              <TableHead>Subject</TableHead>
+              <TableHead>Content Preview</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredEmails.map((email) => (
+              <TableRow 
+                key={email.id}
+                className={`cursor-pointer hover:bg-muted/50 ${!email.is_read ? 'bg-blue-50' : ''}`}
+                onClick={() => markAsRead(email.id)}
+              >
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>
+                        {email.from_email.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-medium">{email.from_email}</span>
                   </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs text-gray-500">{formatDate(email.timestamp)}</span>
-                  <Button variant="ghost" size="sm">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                {email.content}
-              </p>
-              <div className="flex space-x-2">
-                <Button size="sm" variant="outline">
-                  <Reply className="h-4 w-4 mr-2" />
-                  Reply
-                </Button>
-                <Button size="sm" variant="outline">
-                  <Forward className="h-4 w-4 mr-2" />
-                  Forward
-                </Button>
-                <Button size="sm" variant="outline">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Mark as {email.is_read ? 'Unread' : 'Read'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center space-x-2">
+                    <span>{email.subject}</span>
+                    {!email.is_read && <Badge variant="secondary" className="text-xs">New</Badge>}
+                    {email.is_draft && <Badge variant="outline" className="text-xs">Draft</Badge>}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm text-gray-600 line-clamp-1">
+                    {email.content.substring(0, 100)}...
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className="text-sm text-gray-500">{formatDate(email.timestamp)}</span>
+                </TableCell>
+                <TableCell>
+                  {email.is_sent ? 
+                    <Badge variant="default">Sent</Badge> : 
+                    <Badge variant="secondary">Received</Badge>
+                  }
+                </TableCell>
+                <TableCell>
+                  <div className="flex space-x-1">
+                    <Button size="sm" variant="outline">
+                      <Reply className="h-3 w-3 mr-1" />
+                      Reply
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      <Forward className="h-3 w-3 mr-1" />
+                      Forward
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
   );
