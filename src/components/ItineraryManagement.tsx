@@ -5,12 +5,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Calendar, Users, DollarSign, MapPin } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Calendar, Users, DollarSign, MapPin, Search } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
 const ItineraryManagement = () => {
   const [selectedItinerary, setSelectedItinerary] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("updated_at");
   const { toast } = useToast();
 
   const { data: itineraries = [], isLoading } = useQuery({
@@ -29,6 +33,36 @@ const ItineraryManagement = () => {
     },
   });
 
+  // Filter and sort itineraries
+  const filteredAndSortedItineraries = itineraries
+    .filter(itinerary => {
+      if (!searchQuery) return true;
+      const searchLower = searchQuery.toLowerCase();
+      return (
+        itinerary.title.toLowerCase().includes(searchLower) ||
+        itinerary.customer?.name.toLowerCase().includes(searchLower) ||
+        itinerary.description?.toLowerCase().includes(searchLower)
+      );
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "start_date":
+          if (!a.start_date && !b.start_date) return 0;
+          if (!a.start_date) return 1;
+          if (!b.start_date) return -1;
+          return new Date(b.start_date).getTime() - new Date(a.start_date).getTime();
+        case "total_days":
+          return b.total_days - a.total_days;
+        case "total_participants":
+          return (b.total_participants || 0) - (a.total_participants || 0);
+        case "budget":
+          return (b.budget || 0) - (a.budget || 0);
+        case "updated_at":
+        default:
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      }
+    });
+
   if (isLoading) {
     return <div className="container mx-auto py-8">Loading itineraries...</div>;
   }
@@ -43,16 +77,41 @@ const ItineraryManagement = () => {
         </Button>
       </div>
 
+      {/* Search and Sort Controls */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Search itineraries by title, customer, or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="Sort by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="updated_at">Last Updated</SelectItem>
+            <SelectItem value="start_date">Travel Date</SelectItem>
+            <SelectItem value="total_days">Number of Days</SelectItem>
+            <SelectItem value="total_participants">Number of People</SelectItem>
+            <SelectItem value="budget">Price</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Left: Itinerary List */}
         <div className="lg:col-span-1">
           <Card>
             <CardHeader>
-              <CardTitle>Itineraries</CardTitle>
+              <CardTitle>Itineraries ({filteredAndSortedItineraries.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {itineraries.map((itinerary) => (
+                {filteredAndSortedItineraries.map((itinerary) => (
                   <div
                     key={itinerary.id}
                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${
@@ -102,11 +161,13 @@ const ItineraryManagement = () => {
                   </div>
                 ))}
                 
-                {itineraries.length === 0 && (
+                {filteredAndSortedItineraries.length === 0 && (
                   <div className="text-center py-6 text-gray-500">
                     <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                     <p>No itineraries found</p>
-                    <p className="text-xs">Create your first itinerary to get started</p>
+                    <p className="text-xs">
+                      {searchQuery ? 'Try adjusting your search' : 'Create your first itinerary to get started'}
+                    </p>
                   </div>
                 )}
               </div>
