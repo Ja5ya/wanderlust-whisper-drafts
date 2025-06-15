@@ -47,7 +47,8 @@ const BookingManagement = () => {
     .filter(booking => {
       const matchesSearch = booking.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            booking.hotel?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           booking.destination.toLowerCase().includes(searchTerm.toLowerCase());
+                           booking.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           booking.booking_reference.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesStatus = statusFilter === "all" || booking.status.toLowerCase() === statusFilter;
       return matchesSearch && matchesStatus;
     })
@@ -58,6 +59,7 @@ const BookingManagement = () => {
       }
       if (sortBy === "client") return (a.customer?.name || '').localeCompare(b.customer?.name || '');
       if (sortBy === "hotel") return (a.hotel?.name || '').localeCompare(b.hotel?.name || '');
+      if (sortBy === "date") return new Date(a.start_date).getTime() - new Date(b.start_date).getTime();
       return 0;
     });
 
@@ -81,7 +83,7 @@ const BookingManagement = () => {
               <div className="flex justify-between items-center">
                 <div>
                   <CardTitle>All Reservations</CardTitle>
-                  <CardDescription>Manage all hotel and flight reservations</CardDescription>
+                  <CardDescription>Manage all hotel and flight reservations ({filteredBookings.length} bookings)</CardDescription>
                 </div>
                 <Dialog>
                   <DialogTrigger asChild>
@@ -105,7 +107,7 @@ const BookingManagement = () => {
                 <div className="relative flex-1 min-w-[200px]">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by client, hotel, or destination..."
+                    placeholder="Search by client, hotel, destination, or reference..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -132,6 +134,7 @@ const BookingManagement = () => {
                     <SelectItem value="status">Status</SelectItem>
                     <SelectItem value="client">Client</SelectItem>
                     <SelectItem value="hotel">Hotel</SelectItem>
+                    <SelectItem value="date">Date</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -168,7 +171,7 @@ const BookingManagement = () => {
                           </div>
                         </TableCell>
                         <TableCell>{booking.number_of_guests}</TableCell>
-                        <TableCell className="font-semibold">${booking.total_amount}</TableCell>
+                        <TableCell className="font-semibold">${booking.total_amount?.toLocaleString()}</TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(booking.status)}>
                             {booking.status}
@@ -196,7 +199,10 @@ const BookingManagement = () => {
 
               {filteredBookings.length === 0 && !isLoading && (
                 <div className="text-center py-8 text-gray-500">
-                  No bookings found matching your criteria
+                  {searchTerm || statusFilter !== "all" 
+                    ? "No bookings found matching your criteria" 
+                    : "No bookings found. Create your first booking to get started."
+                  }
                 </div>
               )}
             </CardContent>

@@ -14,7 +14,6 @@ import RoutePlanning from "@/components/RoutePlanning";
 import ItineraryManagement from "@/components/ItineraryManagement";
 import BookingManagement from "@/components/BookingManagement";
 import BackOffice from "@/components/BackOffice";
-import CustomerCalendar from "@/components/CustomerCalendar";
 import { useUnreadEmailCount } from "@/hooks/useMessages";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -60,7 +59,7 @@ const Dashboard = () => {
         .eq('is_read', false);
       
       if (error) throw error;
-      return Math.min(count || 0, 10); // Cap at 10 for display purposes
+      return Math.min(count || 0, 10);
     },
   });
 
@@ -174,12 +173,11 @@ const Dashboard = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="new-messages" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="new-messages">Messages</TabsTrigger>
             <TabsTrigger value="customers">Customers</TabsTrigger>
             <TabsTrigger value="itineraries">Itineraries</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
           </TabsList>
 
@@ -197,10 +195,6 @@ const Dashboard = () => {
 
           <TabsContent value="bookings">
             <BookingManagement />
-          </TabsContent>
-
-          <TabsContent value="calendar">
-            <CustomerCalendar />
           </TabsContent>
 
           <TabsContent value="analytics">

@@ -1,223 +1,134 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Check } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { format, parseISO } from "date-fns";
-import SpeechToText from "./SpeechToText";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Mail, MoreHorizontal, Reply, Forward } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EmailTabProps {
-  customerEmails: any[];
-  customerId: string;
-  customerName: string;
+  searchTerm?: string;
 }
 
-const EmailTab = ({ customerEmails, customerId, customerName }: EmailTabProps) => {
-  const [selectedEmail, setSelectedEmail] = useState<any>(null);
-  const [draftResponse, setDraftResponse] = useState("");
-  const [customPrompt, setCustomPrompt] = useState("");
-  const [voiceNotes, setVoiceNotes] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const { toast } = useToast();
+interface EmailMessage {
+  id: string;
+  from_email: string;
+  to_email: string;
+  subject: string;
+  content: string;
+  timestamp: string;
+  is_read: boolean;
+  is_sent: boolean;
+  is_draft: boolean;
+  customer_id?: string;
+}
 
-  useEffect(() => {
-    if (selectedEmail && !draftResponse) {
-      generateDraft();
-    }
-  }, [selectedEmail]);
-
-  const generateDraft = async () => {
-    if (!selectedEmail) return;
-
-    setIsGenerating(true);
-    
-    setTimeout(() => {
-      let draft = `Dear ${customerName},
-
-Thank you for your message. I'd be happy to help you with your travel needs.
-
-Based on your inquiry, I've prepared some initial recommendations:
-• Customized itinerary based on your preferences
-• Family-friendly accommodations
-• Local experiences and cultural activities
-• Transportation arrangements
-
-I'll send you a detailed proposal within 24 hours with specific pricing and availability.
-
-${customPrompt ? `\nAdditional notes: ${customPrompt}` : ''}
-${voiceNotes ? `\nVoice notes: ${voiceNotes}` : ''}
-
-Best regards,
-Travel Specialist
-TravelAssist DMC`;
-
-      setDraftResponse(draft);
-      setIsGenerating(false);
+const EmailTab = ({ searchTerm = "" }: EmailTabProps) => {
+  const { data: emails = [], isLoading } = useQuery({
+    queryKey: ['email-messages'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('email_messages')
+        .select('*')
+        .order('timestamp', { ascending: false });
       
-      toast({
-        title: "Success",
-        description: "Email draft generated successfully!",
-      });
-    }, 2000);
+      if (error) throw error;
+      return data as EmailMessage[];
+    },
+  });
+
+  const filteredEmails = emails.filter(email =>
+    email.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    email.from_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    email.content.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const markAsRead = async (emailId: string) => {
+    await supabase
+      .from('email_messages')
+      .update({ is_read: true })
+      .eq('id', emailId);
   };
 
-  const regenerateDraft = () => {
-    setDraftResponse("");
-    generateDraft();
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      return 'Just now';
+    } else if (diffInHours < 24) {
+      return `${Math.floor(diffInHours)}h ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
   };
 
-  const acceptDraft = () => {
-    toast({
-      title: "Draft Accepted",
-      description: "Email moved to your drafts folder for final review and sending.",
-    });
-    setDraftResponse("");
-    setSelectedEmail(null);
-    setVoiceNotes("");
-    setCustomPrompt("");
-  };
+  if (isLoading) {
+    return <div className="text-center py-8">Loading email messages...</div>;
+  }
 
   return (
-    <div className="grid md:grid-cols-2 gap-6">
-      {/* Email List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Email Messages</span>
-            <Button variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {customerEmails.map((email) => (
-              <div
-                key={email.id}
-                className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                  selectedEmail?.id === email.id ? 'bg-primary/10 border-primary' : 'hover:bg-gray-50'
-                } ${!email.is_read ? 'border-l-4 border-l-blue-500' : ''}`}
-                onClick={() => setSelectedEmail(email)}
-              >
-                <div className="flex justify-between items-start mb-1">
-                  <span className="font-medium text-sm">{email.from_email}</span>
-                  <span className="text-xs text-gray-500">{format(parseISO(email.timestamp), 'MMM d, HH:mm')}</span>
-                </div>
-                <div className="text-sm font-medium mb-1">{email.subject}</div>
-                <div className="text-xs text-gray-600 line-clamp-2">{email.content}</div>
-                {!email.is_read && (
-                  <Badge variant="secondary" className="text-xs mt-1">New</Badge>
-                )}
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* AI Draft Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>AI Email Assistant</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {selectedEmail ? (
-            <>
-              {/* Original Message */}
-              <div>
-                <Label htmlFor="email-content">Original Message</Label>
-                <Textarea
-                  id="email-content"
-                  value={selectedEmail.content}
-                  readOnly
-                  rows={4}
-                  className="bg-gray-50"
-                />
-              </div>
-
-              {/* AI Generated Response */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label htmlFor="draft-response">AI Generated Response</Label>
-                  {draftResponse && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={regenerateDraft}
-                      disabled={isGenerating}
-                    >
-                      <RefreshCw className="h-3 w-3 mr-1" />
-                      Regenerate
-                    </Button>
-                  )}
-                </div>
-                {isGenerating ? (
-                  <div className="flex items-center justify-center py-8 text-sm text-gray-500">
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Generating AI response...
+    <div className="space-y-4">
+      {filteredEmails.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          {searchTerm ? 'No email messages found matching your search' : 'No email messages found'}
+        </div>
+      ) : (
+        filteredEmails.map((email) => (
+          <Card 
+            key={email.id} 
+            className={`cursor-pointer hover:shadow-md transition-shadow ${!email.is_read ? 'border-blue-200 bg-blue-50' : ''}`}
+            onClick={() => markAsRead(email.id)}
+          >
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback>
+                      {email.from_email.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <CardTitle className="text-base">{email.from_email}</CardTitle>
+                      {!email.is_read && <Badge variant="secondary" className="text-xs">New</Badge>}
+                      {email.is_draft && <Badge variant="outline" className="text-xs">Draft</Badge>}
+                    </div>
+                    <CardDescription className="text-sm">{email.subject}</CardDescription>
                   </div>
-                ) : (
-                  <Textarea
-                    id="draft-response"
-                    value={draftResponse}
-                    onChange={(e) => setDraftResponse(e.target.value)}
-                    rows={8}
-                    className="border-green-200 bg-green-50/30"
-                    placeholder="AI response will appear here automatically..."
-                  />
-                )}
-              </div>
-
-              {/* Custom Instructions */}
-              <div>
-                <Label htmlFor="custom-prompt">Custom Instructions (Optional)</Label>
-                <Input
-                  id="custom-prompt"
-                  placeholder="e.g., mention our spring promotion..."
-                  value={customPrompt}
-                  onChange={(e) => setCustomPrompt(e.target.value)}
-                />
-              </div>
-
-              {/* Voice Notes */}
-              <div>
-                <Label htmlFor="voice-notes">Voice Notes & Transcription</Label>
-                <Textarea
-                  id="voice-notes"
-                  placeholder="Your voice notes and transcription will appear here..."
-                  value={voiceNotes}
-                  onChange={(e) => setVoiceNotes(e.target.value)}
-                  rows={3}
-                />
-                <div className="mt-2">
-                  <SpeechToText 
-                    onTranscript={(text) => setVoiceNotes(prev => prev ? `${prev}\n\n${text}` : text)}
-                    placeholder="Click microphone to add voice notes..."
-                  />
                 </div>
-              </div>
-
-              {/* Action Buttons */}
-              {draftResponse && (
-                <div className="flex gap-2 pt-4 border-t">
-                  <Button onClick={acceptDraft} className="flex-1">
-                    <Check className="h-4 w-4 mr-2" />
-                    Accept & Move to Drafts
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-gray-500">{formatDate(email.timestamp)}</span>
+                  <Button variant="ghost" size="sm">
+                    <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              Select an email to view details and generate a response
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                {email.content}
+              </p>
+              <div className="flex space-x-2">
+                <Button size="sm" variant="outline">
+                  <Reply className="h-4 w-4 mr-2" />
+                  Reply
+                </Button>
+                <Button size="sm" variant="outline">
+                  <Forward className="h-4 w-4 mr-2" />
+                  Forward
+                </Button>
+                <Button size="sm" variant="outline">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Mark as {email.is_read ? 'Unread' : 'Read'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))
+      )}
     </div>
   );
 };
