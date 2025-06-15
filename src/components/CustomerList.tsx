@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -209,7 +208,7 @@ const CustomerList = () => {
             ) : (
               <div className={customerView === 'grid' ? 'grid gap-4 md:grid-cols-2 lg:grid-cols-3' : 'space-y-2'}>
                 {filteredAndSortedCustomers.map((customer) => (
-                  <Card key={customer.id} className={`hover:shadow-md transition-shadow ${customerView === 'list' ? 'p-4' : ''}`}>
+                  <Card key={customer.id} className={`hover:shadow-md transition-shadow flex flex-col ${customerView === 'list' ? 'p-4' : ''}`}>
                     {customerView === 'grid' ? (
                       <>
                         <CardHeader>
@@ -221,8 +220,8 @@ const CustomerList = () => {
                           </div>
                           <CardDescription>{customer.email}</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2">
+                        <CardContent className="flex-1 flex flex-col">
+                          <div className="space-y-2 flex-1">
                             {customer.phone && (
                               <div className="flex items-center text-sm text-gray-600">
                                 <Phone className="h-4 w-4 mr-2" />
