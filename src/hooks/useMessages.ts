@@ -27,7 +27,7 @@ export const useEmailMessages = () => {
         .from('email_messages')
         .select(`
           *,
-          customer:customers(name, email)
+          customer:customers!customer_id(name, email)
         `)
         .order('timestamp', { ascending: false });
       
