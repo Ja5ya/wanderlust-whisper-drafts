@@ -132,6 +132,13 @@ export type Database = {
             referencedRelation: "bookings"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_booking_items_booking"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       bookings: {
@@ -218,6 +225,27 @@ export type Database = {
           },
           {
             foreignKeyName: "bookings_room_type_id_fkey"
+            columns: ["room_type_id"]
+            isOneToOne: false
+            referencedRelation: "room_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_bookings_customer"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_bookings_hotel"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_bookings_room_type"
             columns: ["room_type_id"]
             isOneToOne: false
             referencedRelation: "room_types"
@@ -351,6 +379,13 @@ export type Database = {
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_email_messages_customer"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       faqs: {
@@ -427,6 +462,13 @@ export type Database = {
           valid_to?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_guide_rates_guide"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "guides"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "guide_rates_guide_id_fkey"
             columns: ["guide_id"]
@@ -543,6 +585,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_hotel_rates_hotel"
+            columns: ["hotel_id"]
+            isOneToOne: false
+            referencedRelation: "hotels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_hotel_rates_room_type"
+            columns: ["room_type_id"]
+            isOneToOne: false
+            referencedRelation: "room_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "hotel_rates_hotel_id_fkey"
             columns: ["hotel_id"]
@@ -679,6 +735,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_itineraries_customer"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "itineraries_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -713,6 +776,20 @@ export type Database = {
           order_index?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_itinerary_day_content_blocks_content"
+            columns: ["content_block_id"]
+            isOneToOne: false
+            referencedRelation: "tour_content_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_itinerary_day_content_blocks_day"
+            columns: ["itinerary_day_id"]
+            isOneToOne: false
+            referencedRelation: "itinerary_days"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "itinerary_day_content_blocks_content_block_id_fkey"
             columns: ["content_block_id"]
@@ -777,6 +854,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_itinerary_days_itinerary"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fk_itinerary_days_template"
             columns: ["tour_day_template_id"]
             isOneToOne: false
@@ -836,6 +920,27 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_notes_booking"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_notes_customer"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_notes_itinerary"
+            columns: ["itinerary_id"]
+            isOneToOne: false
+            referencedRelation: "itineraries"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notes_booking_id_fkey"
             columns: ["booking_id"]
@@ -1131,6 +1236,13 @@ export type Database = {
           timestamp?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_whatsapp_messages_customer"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "whatsapp_messages_customer_id_fkey"
             columns: ["customer_id"]
