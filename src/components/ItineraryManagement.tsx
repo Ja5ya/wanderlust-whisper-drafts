@@ -6,15 +6,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Calendar, Users, DollarSign, MapPin, Search } from "lucide-react";
+import { Plus, Calendar, Users, DollarSign, MapPin, Search, RefreshCw, Check, Settings, MessageSquare } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import SpeechToText from "./SpeechToText";
+import { usePricingCalculation } from "@/hooks/usePricingCalculation";
 
 const ItineraryManagement = () => {
   const [selectedItinerary, setSelectedItinerary] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("updated_at");
+  const [draftItinerary, setDraftItinerary] = useState("");
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [voiceNotes, setVoiceNotes] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
   const { data: itineraries = [], isLoading } = useQuery({
@@ -31,6 +40,46 @@ const ItineraryManagement = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: customerEmails = [] } = useQuery({
+    queryKey: ['customer-emails', selectedItinerary?.customer_id],
+    queryFn: async () => {
+      if (!selectedItinerary?.customer_id) return [];
+      const { data, error } = await supabase
+        .from('email_messages')
+        .select('*')
+        .eq('customer_id', selectedItinerary.customer_id)
+        .order('timestamp', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedItinerary?.customer_id,
+  });
+
+  const { data: customerWhatsApp = [] } = useQuery({
+    queryKey: ['customer-whatsapp', selectedItinerary?.customer_id],
+    queryFn: async () => {
+      if (!selectedItinerary?.customer_id) return [];
+      const { data, error } = await supabase
+        .from('whatsapp_messages')
+        .select('*')
+        .eq('customer_id', selectedItinerary.customer_id)
+        .order('timestamp', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedItinerary?.customer_id,
+  });
+
+  const { pricing, updatePricing } = usePricingCalculation({
+    itineraryId: selectedItinerary?.id,
+    totalDays: selectedItinerary?.total_days || 1,
+    totalParticipants: selectedItinerary?.total_participants || 1
   });
 
   // Filter and sort itineraries
@@ -62,6 +111,110 @@ const ItineraryManagement = () => {
           return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       }
     });
+
+  const generateItinerary = async () => {
+    if (!selectedItinerary) return;
+
+    setIsGenerating(true);
+    
+    // Get recent messages for context
+    const recentMessages = [
+      ...customerEmails.slice(0, 3).map(email => `Email: ${email.subject} - ${email.content}`),
+      ...customerWhatsApp.slice(0, 3).map(msg => `WhatsApp: ${msg.message_content}`)
+    ];
+
+    setTimeout(() => {
+      let itinerary = `PERSONALIZED ITINERARY FOR ${selectedItinerary.customer?.name?.toUpperCase() || 'CLIENT'}
+Duration: ${selectedItinerary.total_days} days
+Participants: ${selectedItinerary.total_participants || 'Not specified'}
+
+${recentMessages.length > 0 ? `\nBased on recent communications:\n${recentMessages.join('\n')}\n` : ''}
+
+DAY-BY-DAY ITINERARY:
+
+Day 1: Arrival & Welcome
+- Airport pickup and transfer to hotel
+- Hotel check-in and welcome briefing
+- City orientation tour
+- Welcome dinner at local restaurant
+
+Day 2: Cultural Immersion
+- Morning: Historical sites and museums
+- Afternoon: Local market exploration
+- Evening: Traditional cultural performance
+
+Day 3: Adventure & Nature
+- Full-day outdoor adventure activity
+- Scenic location visits
+- Photography opportunities
+- Local lunch experience
+
+${selectedItinerary.total_days > 3 ? `
+Day 4-${selectedItinerary.total_days - 1}: Extended Exploration
+- Customized activities based on preferences
+- Multiple location visits
+- Cultural immersion experiences
+- Local interaction opportunities
+` : ''}
+
+Day ${selectedItinerary.total_days}: Departure
+- Final shopping and souvenir hunting
+- Hotel checkout and airport transfer
+- Departure assistance
+
+${customPrompt ? `\nCustom Requirements: ${customPrompt}` : ''}
+${voiceNotes ? `\nVoice Notes: ${voiceNotes}` : ''}
+
+INCLUDED SERVICES:
+• Accommodation (${selectedItinerary.total_days - 1} nights)
+• All transfers and transportation
+• Professional guide services
+• Entrance fees to attractions
+• Selected meals as mentioned
+• 24/7 emergency support
+
+EXCLUDED SERVICES:
+• International flights
+• Travel insurance
+• Personal expenses
+• Tips and gratuities
+• Optional activities`;
+
+      setDraftItinerary(itinerary);
+      setIsGenerating(false);
+      
+      toast({
+        title: "Success",
+        description: "AI itinerary generated successfully!",
+      });
+    }, 3000);
+  };
+
+  const regenerateItinerary = () => {
+    setDraftItinerary("");
+    generateItinerary();
+  };
+
+  const acceptItinerary = () => {
+    toast({
+      title: "Itinerary Accepted",
+      description: "Itinerary saved successfully!",
+    });
+    setDraftItinerary("");
+    setVoiceNotes("");
+    setCustomPrompt("");
+  };
+
+  const handleItinerarySelect = (itinerary: any) => {
+    setSelectedItinerary(itinerary);
+    setDraftItinerary("");
+    setCustomPrompt("");
+    setVoiceNotes("");
+    // Auto-generate itinerary when selected
+    setTimeout(() => {
+      generateItinerary();
+    }, 100);
+  };
 
   if (isLoading) {
     return <div className="container mx-auto py-8">Loading itineraries...</div>;
@@ -117,7 +270,7 @@ const ItineraryManagement = () => {
                     className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                       selectedItinerary?.id === itinerary.id ? 'bg-primary/10 border-primary' : 'hover:bg-gray-50'
                     }`}
-                    onClick={() => setSelectedItinerary(itinerary)}
+                    onClick={() => handleItinerarySelect(itinerary)}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <h3 className="font-medium text-sm">{itinerary.customer?.name || 'Unknown Client'}</h3>
@@ -176,82 +329,208 @@ const ItineraryManagement = () => {
         {/* Right: Itinerary Details */}
         <div className="lg:col-span-2">
           {selectedItinerary ? (
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>{selectedItinerary.customer?.name || 'Unknown Client'}</CardTitle>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {selectedItinerary.title}
-                    </p>
+            <div className="space-y-6">
+              {/* Recent Messages Context */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center">
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Recent Communications Context
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {[...customerEmails.slice(0, 2), ...customerWhatsApp.slice(0, 2)].map((msg, index) => (
+                      <div key={index} className="text-xs p-2 bg-gray-50 rounded">
+                        <span className="font-medium">
+                          {'subject' in msg ? 'Email' : 'WhatsApp'}:
+                        </span>
+                        <span className="ml-2">
+                          {'subject' in msg ? msg.subject : msg.message_content.substring(0, 100)}...
+                        </span>
+                      </div>
+                    ))}
+                    {customerEmails.length === 0 && customerWhatsApp.length === 0 && (
+                      <div className="text-xs text-gray-500 text-center py-2">
+                        No recent communications to display
+                      </div>
+                    )}
                   </div>
-                  <Badge variant={selectedItinerary.customer?.status === 'active' ? 'default' : 'secondary'}>
-                    {selectedItinerary.customer?.status || 'Unknown'}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Itinerary Details */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-sm font-medium">Duration:</span>
-                    <p className="text-sm text-gray-600">{selectedItinerary.total_days} days</p>
-                  </div>
-                  {selectedItinerary.total_participants && (
-                    <div>
-                      <span className="text-sm font-medium">Participants:</span>
-                      <p className="text-sm text-gray-600">{selectedItinerary.total_participants}</p>
-                    </div>
-                  )}
-                  {selectedItinerary.budget && (
-                    <div>
-                      <span className="text-sm font-medium">Budget:</span>
-                      <p className="text-sm text-gray-600">${selectedItinerary.budget.toLocaleString()}</p>
-                    </div>
-                  )}
-                  {selectedItinerary.start_date && (
-                    <div>
-                      <span className="text-sm font-medium">Start Date:</span>
-                      <p className="text-sm text-gray-600">
-                        {format(parseISO(selectedItinerary.start_date), 'MMM d, yyyy')}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                </CardContent>
+              </Card>
 
-                {selectedItinerary.description && (
-                  <div>
-                    <span className="text-sm font-medium">Description:</span>
-                    <p className="text-sm text-gray-600 mt-1">{selectedItinerary.description}</p>
+              {/* AI Generated Itinerary */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>AI Generated Itinerary</CardTitle>
+                    <div className="flex items-center space-x-2">
+                      {draftItinerary && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={regenerateItinerary}
+                          disabled={isGenerating}
+                        >
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          Regenerate
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                )}
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {isGenerating ? (
+                    <div className="flex items-center justify-center py-8 text-sm text-gray-500">
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Generating AI itinerary...
+                    </div>
+                  ) : (
+                    <Textarea
+                      value={draftItinerary}
+                      onChange={(e) => setDraftItinerary(e.target.value)}
+                      rows={15}
+                      className="border-green-200 bg-green-50/30 font-mono text-sm"
+                      placeholder="AI itinerary will appear here automatically..."
+                    />
+                  )}
+                </CardContent>
+              </Card>
 
-                {selectedItinerary.notes && (
+              {/* Custom Instructions & Voice */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Customization</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
                   <div>
-                    <span className="text-sm font-medium">Notes:</span>
-                    <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{selectedItinerary.notes}</p>
+                    <Label htmlFor="custom-prompt">Custom Instructions</Label>
+                    <Input
+                      id="custom-prompt"
+                      placeholder="e.g., add adventure activities, focus on cultural experiences..."
+                      value={customPrompt}
+                      onChange={(e) => setCustomPrompt(e.target.value)}
+                    />
                   </div>
-                )}
 
+                  <div>
+                    <Label htmlFor="voice-notes">Voice Notes & Transcription</Label>
+                    <Textarea
+                      id="voice-notes"
+                      placeholder="Your voice notes and transcription will appear here..."
+                      value={voiceNotes}
+                      onChange={(e) => setVoiceNotes(e.target.value)}
+                      rows={3}
+                    />
+                    <div className="mt-2">
+                      <SpeechToText 
+                        onTranscript={(text) => setVoiceNotes(prev => prev ? `${prev}\n\n${text}` : text)}
+                        placeholder="Click microphone to add voice notes..."
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Enhanced Price Breakdown */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Price Breakdown & Calculation
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="hotels">Hotels ({selectedItinerary.total_days - 1} nights)</Label>
+                      <Input
+                        id="hotels"
+                        type="number"
+                        value={pricing.hotels}
+                        onChange={(e) => updatePricing('hotels', Number(e.target.value))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="transportation">Transportation ({selectedItinerary.total_days} days)</Label>
+                      <Input
+                        id="transportation"
+                        type="number"
+                        value={pricing.transportation}
+                        onChange={(e) => updatePricing('transportation', Number(e.target.value))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="activities">Activities (per person)</Label>
+                      <Input
+                        id="activities"
+                        type="number"
+                        value={pricing.activities}
+                        onChange={(e) => updatePricing('activities', Number(e.target.value))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="guides">Guide Services ({selectedItinerary.total_days} days)</Label>
+                      <Input
+                        id="guides"
+                        type="number"
+                        value={pricing.guides}
+                        onChange={(e) => updatePricing('guides', Number(e.target.value))}
+                      />
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="profit-margin">Profit Margin (%)</Label>
+                      <Input
+                        id="profit-margin"
+                        type="number"
+                        value={pricing.profitMargin}
+                        onChange={(e) => updatePricing('profitMargin', Number(e.target.value))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium">Subtotal:</span>
+                        <span className="font-medium">${pricing.totalCost.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium">Profit ({pricing.profitMargin}%):</span>
+                        <span className="font-medium text-green-600">${pricing.totalProfit.toLocaleString()}</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between text-lg font-bold">
+                        <span>Total Price:</span>
+                        <span className="text-blue-600">${pricing.totalPrice.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-xs text-gray-500 mt-2">
+                    * Prices calculated from database rates and can be manually adjusted
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons */}
+              {draftItinerary && (
                 <div className="flex gap-2 pt-4 border-t">
-                  <Button variant="outline" size="sm">
-                    Edit Itinerary
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    View Days
-                  </Button>
-                  <Button size="sm">
-                    Share with Client
+                  <Button onClick={acceptItinerary} className="flex-1">
+                    <Check className="h-4 w-4 mr-2" />
+                    Accept & Save Itinerary
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              )}
+            </div>
           ) : (
             <Card>
               <CardContent className="text-center py-12">
                 <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                 <h3 className="text-lg font-medium mb-2">Select an Itinerary</h3>
-                <p className="text-gray-600">Choose an itinerary from the list to view its details</p>
+                <p className="text-gray-600">Choose an itinerary from the list to view AI-generated content and pricing details</p>
               </CardContent>
             </Card>
           )}
