@@ -6,7 +6,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MessageCircle, MoreHorizontal, Reply, Phone } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface WhatsAppTabProps {
   searchTerm?: string;
@@ -37,9 +36,10 @@ const WhatsAppTab = ({ searchTerm = "", customerWhatsApp, customerId, customerNa
       if (error) throw error;
       return data as WhatsAppMessage[];
     },
-    enabled: !customerWhatsApp,
+    enabled: !customerWhatsApp, // Only fetch if customerWhatsApp not provided
   });
 
+  // Use provided customerWhatsApp or fetched allMessages
   const messages = customerWhatsApp || allMessages;
 
   const filteredMessages = messages.filter(message =>
@@ -79,67 +79,60 @@ const WhatsAppTab = ({ searchTerm = "", customerWhatsApp, customerId, customerNa
           {searchTerm ? 'No WhatsApp messages found matching your search' : 'No WhatsApp messages found'}
         </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Phone Number</TableHead>
-              <TableHead>Message</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Direction</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredMessages.map((message) => (
-              <TableRow 
-                key={message.id}
-                className={`cursor-pointer hover:bg-muted/50 ${!message.is_read && message.is_incoming ? 'bg-green-50' : ''}`}
-                onClick={() => markAsRead(message.id)}
-              >
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-green-100 text-green-700">
-                        <MessageCircle className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="font-medium">{message.phone_number}</span>
+        filteredMessages.map((message) => (
+          <Card 
+            key={message.id} 
+            className={`cursor-pointer hover:shadow-md transition-shadow ${!message.is_read && message.is_incoming ? 'border-green-200 bg-green-50' : ''}`}
+            onClick={() => markAsRead(message.id)}
+          >
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback className="bg-green-100 text-green-700">
+                      <MessageCircle className="h-5 w-5" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <CardTitle className="text-base">{message.phone_number}</CardTitle>
+                      {!message.is_read && message.is_incoming && <Badge className="bg-green-100 text-green-800 text-xs">New</Badge>}
+                      {!message.is_incoming && <Badge variant="outline" className="text-xs">Sent</Badge>}
+                    </div>
+                    <CardDescription className="text-sm">
+                      {message.is_incoming ? 'Incoming message' : 'Outgoing message'}
+                    </CardDescription>
                   </div>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm line-clamp-1">
-                    {message.message_content.substring(0, 100)}...
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm text-gray-500">{formatDate(message.timestamp)}</span>
-                </TableCell>
-                <TableCell>
-                  {message.is_incoming ? 
-                    <Badge className="bg-blue-100 text-blue-800">Incoming</Badge> : 
-                    <Badge variant="outline">Outgoing</Badge>
-                  }
-                </TableCell>
-                <TableCell>
-                  {!message.is_read && message.is_incoming && <Badge className="bg-green-100 text-green-800 text-xs">New</Badge>}
-                </TableCell>
-                <TableCell>
-                  <div className="flex space-x-1">
-                    <Button size="sm" variant="outline">
-                      <Reply className="h-3 w-3 mr-1" />
-                      Reply
-                    </Button>
-                    <Button size="sm" variant="outline">
-                      <Phone className="h-3 w-3 mr-1" />
-                      Call
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs text-gray-500">{formatDate(message.timestamp)}</span>
+                  <Button variant="ghost" size="sm">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <p className="text-sm text-gray-600 mb-3">
+                {message.message_content}
+              </p>
+              <div className="flex space-x-2">
+                <Button size="sm" variant="outline">
+                  <Reply className="h-4 w-4 mr-2" />
+                  Reply
+                </Button>
+                <Button size="sm" variant="outline">
+                  <Phone className="h-4 w-4 mr-2" />
+                  Call
+                </Button>
+                <Button size="sm" variant="outline">
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Mark as {message.is_read ? 'Unread' : 'Read'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))
       )}
     </div>
   );
