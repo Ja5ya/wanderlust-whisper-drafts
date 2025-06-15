@@ -9,6 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface WhatsAppTabProps {
   searchTerm?: string;
+  customerWhatsApp?: any[];
+  customerId?: string;
+  customerName?: string;
 }
 
 interface WhatsAppMessage {
@@ -21,8 +24,8 @@ interface WhatsAppMessage {
   customer_id?: string;
 }
 
-const WhatsAppTab = ({ searchTerm = "" }: WhatsAppTabProps) => {
-  const { data: messages = [], isLoading } = useQuery({
+const WhatsAppTab = ({ searchTerm = "", customerWhatsApp, customerId, customerName }: WhatsAppTabProps) => {
+  const { data: allMessages = [], isLoading } = useQuery({
     queryKey: ['whatsapp-messages'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -33,7 +36,11 @@ const WhatsAppTab = ({ searchTerm = "" }: WhatsAppTabProps) => {
       if (error) throw error;
       return data as WhatsAppMessage[];
     },
+    enabled: !customerWhatsApp, // Only fetch if customerWhatsApp not provided
   });
+
+  // Use provided customerWhatsApp or fetched allMessages
+  const messages = customerWhatsApp || allMessages;
 
   const filteredMessages = messages.filter(message =>
     message.phone_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -61,7 +68,7 @@ const WhatsAppTab = ({ searchTerm = "" }: WhatsAppTabProps) => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !customerWhatsApp) {
     return <div className="text-center py-8">Loading WhatsApp messages...</div>;
   }
 

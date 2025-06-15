@@ -9,6 +9,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface EmailTabProps {
   searchTerm?: string;
+  customerEmails?: any[];
+  customerId?: string;
+  customerName?: string;
 }
 
 interface EmailMessage {
@@ -24,8 +27,8 @@ interface EmailMessage {
   customer_id?: string;
 }
 
-const EmailTab = ({ searchTerm = "" }: EmailTabProps) => {
-  const { data: emails = [], isLoading } = useQuery({
+const EmailTab = ({ searchTerm = "", customerEmails, customerId, customerName }: EmailTabProps) => {
+  const { data: allEmails = [], isLoading } = useQuery({
     queryKey: ['email-messages'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -36,7 +39,11 @@ const EmailTab = ({ searchTerm = "" }: EmailTabProps) => {
       if (error) throw error;
       return data as EmailMessage[];
     },
+    enabled: !customerEmails, // Only fetch if customerEmails not provided
   });
+
+  // Use provided customerEmails or fetched allEmails
+  const emails = customerEmails || allEmails;
 
   const filteredEmails = emails.filter(email =>
     email.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -65,7 +72,7 @@ const EmailTab = ({ searchTerm = "" }: EmailTabProps) => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !customerEmails) {
     return <div className="text-center py-8">Loading email messages...</div>;
   }
 
