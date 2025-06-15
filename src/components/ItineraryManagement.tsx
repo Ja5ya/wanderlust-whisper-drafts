@@ -24,7 +24,7 @@ const ItineraryManagement = () => {
         .from('itineraries')
         .select(`
           *,
-          customer:customers(name, email)
+          customer:customers(name, email, status)
         `)
         .order('created_at', { ascending: false });
       
@@ -120,16 +120,14 @@ const ItineraryManagement = () => {
                     onClick={() => setSelectedItinerary(itinerary)}
                   >
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium text-sm">{itinerary.title}</h3>
-                      <Badge variant={itinerary.status === 'Draft' ? 'secondary' : 'default'}>
-                        {itinerary.status}
+                      <h3 className="font-medium text-sm">{itinerary.customer?.name || 'Unknown Client'}</h3>
+                      <Badge variant={itinerary.customer?.status === 'active' ? 'default' : 'secondary'}>
+                        {itinerary.customer?.status || 'Unknown'}
                       </Badge>
                     </div>
                     
                     <div className="text-xs text-gray-600 space-y-1">
-                      {itinerary.customer && (
-                        <div className="font-medium">{itinerary.customer.name}</div>
-                      )}
+                      <div className="font-medium">{itinerary.title}</div>
                       
                       <div className="flex items-center space-x-3">
                         <div className="flex items-center space-x-1">
@@ -182,15 +180,13 @@ const ItineraryManagement = () => {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle>{selectedItinerary.title}</CardTitle>
-                    {selectedItinerary.customer && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        Client: {selectedItinerary.customer.name}
-                      </p>
-                    )}
+                    <CardTitle>{selectedItinerary.customer?.name || 'Unknown Client'}</CardTitle>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {selectedItinerary.title}
+                    </p>
                   </div>
-                  <Badge variant={selectedItinerary.status === 'Draft' ? 'secondary' : 'default'}>
-                    {selectedItinerary.status}
+                  <Badge variant={selectedItinerary.customer?.status === 'active' ? 'default' : 'secondary'}>
+                    {selectedItinerary.customer?.status || 'Unknown'}
                   </Badge>
                 </div>
               </CardHeader>
