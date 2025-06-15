@@ -63,9 +63,9 @@ export const useEnhancedBookings = () => {
         .from('bookings')
         .select(`
           *,
-          customer:customers(name, email),
-          hotel:hotels(name, location),
-          room_type:room_types(name, max_occupancy)
+          customer:customers!customer_id(name, email),
+          hotel:hotels!hotel_id(name, location),
+          room_type:room_types!room_type_id(name, max_occupancy)
         `)
         .order('created_at', { ascending: false });
       

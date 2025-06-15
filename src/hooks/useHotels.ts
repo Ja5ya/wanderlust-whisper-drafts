@@ -70,7 +70,7 @@ export const useHotelRates = (hotelId: string, startDate?: string, endDate?: str
         .from('hotel_rates')
         .select(`
           *,
-          room_type:room_types(name, description, max_occupancy)
+          room_type:room_types!room_type_id(name, description, max_occupancy)
         `)
         .eq('hotel_id', hotelId)
         .eq('is_available', true);

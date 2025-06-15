@@ -49,7 +49,7 @@ export const useItineraries = () => {
         .from('itineraries')
         .select(`
           *,
-          customer:customers(name, email)
+          customer:customers!customer_id(name, email)
         `)
         .order('created_at', { ascending: false });
       

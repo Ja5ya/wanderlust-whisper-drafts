@@ -32,7 +32,7 @@ const ItineraryManagement = () => {
         .from('itineraries')
         .select(`
           *,
-          customer:customers(name, email, status)
+          customer:customers!customer_id(name, email, status)
         `)
         .order('created_at', { ascending: false });
       

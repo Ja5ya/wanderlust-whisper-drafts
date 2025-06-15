@@ -37,8 +37,8 @@ export const useBookings = () => {
         .from('bookings')
         .select(`
           *,
-          customer:customers(name, email),
-          hotel:hotels(name, location)
+          customer:customers!customer_id(name, email),
+          hotel:hotels!hotel_id(name, location)
         `)
         .order('created_at', { ascending: false });
       
