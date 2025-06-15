@@ -98,25 +98,46 @@ export const usePricingCalculation = ({
 
   // Calculate estimated costs from database rates
   useEffect(() => {
-    if (hotelRates.length > 0 && transportRates.length > 0 && activityRates.length > 0 && guideRates.length > 0) {
+    const nights = Math.max(0, totalDays - 1);
+    
+    let estimatedHotels = 0;
+    if (hotelRates.length > 0) {
       const avgHotelRate = hotelRates.reduce((sum, rate) => sum + Number(rate.rate_per_room), 0) / hotelRates.length;
-      const avgTransportRate = transportRates.reduce((sum, rate) => sum + Number(rate.rate_per_unit), 0) / transportRates.length;
-      const avgActivityRate = activityRates.reduce((sum, rate) => sum + Number(rate.rate_per_person), 0) / activityRates.length;
-      const avgGuideRate = guideRates.reduce((sum, rate) => sum + Number(rate.rate_per_unit), 0) / guideRates.length;
-
-      const estimatedHotels = (totalDays - 1) * avgHotelRate; // nights = days - 1
-      const estimatedTransport = totalDays * avgTransportRate;
-      const estimatedActivities = totalDays * avgActivityRate * totalParticipants;
-      const estimatedGuides = totalDays * avgGuideRate;
-
-      setPricing(prev => ({
-        ...prev,
-        hotels: Math.round(estimatedHotels),
-        transportation: Math.round(estimatedTransport),
-        activities: Math.round(estimatedActivities),
-        guides: Math.round(estimatedGuides)
-      }));
+      estimatedHotels = nights * avgHotelRate;
     }
+
+    let estimatedTransport = 0;
+    if (transportRates.length > 0) {
+      const perDayTransportRates = transportRates.filter(r => r.rate_type === 'per_day');
+      if (perDayTransportRates.length > 0) {
+          const avgTransportRate = perDayTransportRates.reduce((sum, rate) => sum + Number(rate.rate_per_unit), 0) / perDayTransportRates.length;
+          estimatedTransport = totalDays * avgTransportRate;
+      }
+    }
+
+    let estimatedActivities = 0;
+    if (activityRates.length > 0) {
+      const avgActivityRate = activityRates.reduce((sum, rate) => sum + Number(rate.rate_per_person), 0) / activityRates.length;
+      estimatedActivities = totalDays * totalParticipants * avgActivityRate;
+    }
+    
+    let estimatedGuides = 0;
+    if (guideRates.length > 0) {
+      const perDayGuideRates = guideRates.filter(r => r.service_type === 'full_day');
+      if (perDayGuideRates.length > 0) {
+          const avgGuideRate = perDayGuideRates.reduce((sum, rate) => sum + Number(rate.rate_per_unit), 0) / perDayGuideRates.length;
+          estimatedGuides = totalDays * avgGuideRate;
+      }
+    }
+
+    setPricing(prev => ({
+      ...prev,
+      hotels: Math.round(estimatedHotels),
+      transportation: Math.round(estimatedTransport),
+      activities: Math.round(estimatedActivities),
+      guides: Math.round(estimatedGuides),
+    }));
+
   }, [hotelRates, transportRates, activityRates, guideRates, totalDays, totalParticipants]);
 
   // Calculate totals whenever pricing changes

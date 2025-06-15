@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -443,7 +442,7 @@ EXCLUDED SERVICES:
                 <CardContent className="space-y-4">
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="hotels">Hotels ({selectedItinerary.total_days - 1} nights)</Label>
+                      <Label htmlFor="hotels">Hotels ({Math.max(0, selectedItinerary.total_days - 1)} nights)</Label>
                       <Input
                         id="hotels"
                         type="number"
