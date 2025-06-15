@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -37,13 +36,25 @@ export const useBookings = () => {
         .from('bookings')
         .select(`
           *,
-          customer:customers!customer_id(name, email),
-          hotel:hotels!hotel_id(name, location)
+          customers!bookings_customer_id_fkey(name, email),
+          hotels!bookings_hotel_id_fkey(name, location)
         `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as Booking[];
+      
+      // Transform the data to match the expected interface
+      return data.map(booking => ({
+        ...booking,
+        customer: booking.customers ? {
+          name: booking.customers.name,
+          email: booking.customers.email
+        } : undefined,
+        hotel: booking.hotels ? {
+          name: booking.hotels.name,
+          location: booking.hotels.location
+        } : undefined
+      })) as Booking[];
     },
   });
 };
