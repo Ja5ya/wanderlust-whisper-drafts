@@ -27,18 +27,24 @@ const ItineraryManagement = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
 
-  const { data: itineraries = [], isLoading } = useQuery({
+  const { data: itineraries = [], isLoading, error } = useQuery({
     queryKey: ['itineraries'],
     queryFn: async () => {
+      console.log('Fetching itineraries...');
       const { data, error } = await supabase
         .from('itineraries')
         .select(`
           *,
-          customer:customers!customer_id(name, email, status)
+          customers!itineraries_customer_id_fkey(name, email, status)
         `)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching itineraries:', error);
+        throw error;
+      }
+      
+      console.log('Fetched itineraries:', data);
       return data;
     },
   });
@@ -54,7 +60,10 @@ const ItineraryManagement = () => {
         .order('timestamp', { ascending: false })
         .limit(5);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching customer emails:', error);
+        return [];
+      }
       return data;
     },
     enabled: !!selectedItinerary?.customer_id,
@@ -71,7 +80,10 @@ const ItineraryManagement = () => {
         .order('timestamp', { ascending: false })
         .limit(5);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching customer WhatsApp:', error);
+        return [];
+      }
       return data;
     },
     enabled: !!selectedItinerary?.customer_id,
@@ -84,7 +96,7 @@ const ItineraryManagement = () => {
       const searchLower = searchQuery.toLowerCase();
       return (
         itinerary.title.toLowerCase().includes(searchLower) ||
-        itinerary.customer?.name.toLowerCase().includes(searchLower) ||
+        itinerary.customers?.name.toLowerCase().includes(searchLower) ||
         itinerary.description?.toLowerCase().includes(searchLower)
       );
     })
@@ -119,7 +131,7 @@ const ItineraryManagement = () => {
     ];
 
     setTimeout(() => {
-      let itinerary = `PERSONALIZED ITINERARY FOR ${selectedItinerary.customer?.name?.toUpperCase() || 'CLIENT'}
+      let itinerary = `PERSONALIZED ITINERARY FOR ${selectedItinerary.customers?.name?.toUpperCase() || 'CLIENT'}
 Duration: ${selectedItinerary.total_days} days
 Participants: ${selectedItinerary.total_participants || 'Not specified'}
 
@@ -212,7 +224,35 @@ EXCLUDED SERVICES:
   };
 
   if (isLoading) {
-    return <div className="container mx-auto py-8">Loading itineraries...</div>;
+    return (
+      <div className="container mx-auto py-8">
+        <div className="text-center py-12">Loading itineraries...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-8">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center py-12">
+              <div className="text-red-400 mb-4">Error loading itineraries</div>
+              <p className="text-sm text-muted-foreground">
+                {error instanceof Error ? error.message : 'Unknown error occurred'}
+              </p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -268,9 +308,9 @@ EXCLUDED SERVICES:
                     onClick={() => handleItinerarySelect(itinerary)}
                   >
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium text-sm">{itinerary.customer?.name || 'Unknown Client'}</h3>
-                      <Badge variant={itinerary.customer?.status === 'active' ? 'default' : 'secondary'}>
-                        {itinerary.customer?.status || 'Unknown'}
+                      <h3 className="font-medium text-sm">{itinerary.customers?.name || 'Unknown Client'}</h3>
+                      <Badge variant={itinerary.status === 'Confirmed' ? 'default' : 'secondary'}>
+                        {itinerary.status}
                       </Badge>
                     </div>
                     

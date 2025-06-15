@@ -40,7 +40,7 @@ const CustomerCalendar = () => {
           end_date,
           destination,
           status,
-          customers!customer_id(name)
+          customers!bookings_customer_id_fkey(name)
         `)
         .order('start_date', { ascending: true });
       
