@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Mail, Users, Calendar, Route, Settings, AlertCircle, CheckCircle, Clock, Hotel, MapIcon } from "lucide-react";
 import { Link } from "react-router-dom";
-import NewMessages from "@/components/NewMessages";
+import EmailInbox from "@/components/EmailInbox";
 import CustomerList from "@/components/CustomerList";
 import AITrainingSettings from "@/components/AITrainingSettings";
 import BusinessAnalytics from "@/components/BusinessAnalytics";
@@ -182,7 +181,7 @@ const Dashboard = () => {
           </TabsList>
 
           <TabsContent value="new-messages">
-            <NewMessages />
+            <EmailInbox />
           </TabsContent>
 
           <TabsContent value="customers">
