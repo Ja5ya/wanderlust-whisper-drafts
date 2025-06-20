@@ -1,24 +1,11 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus, Edit, Trash2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-
-interface PricingItem {
-  id: string;
-  name: string;
-  dates: string;
-  nights?: number;
-  price: number;
-  currency: string;
-}
+import { PricingSection } from "./pricing/PricingSection";
+import { PricingSummary } from "./pricing/PricingSummary";
+import { AddItemDialog } from "./pricing/AddItemDialog";
+import { usePricingItems } from "@/hooks/usePricingItems";
 
 interface PricingBreakdownProps {
   totalDays: number;
@@ -26,29 +13,16 @@ interface PricingBreakdownProps {
 }
 
 const PricingBreakdown = ({ totalDays, totalParticipants }: PricingBreakdownProps) => {
-  const { toast } = useToast();
-  
-  const [hotels, setHotels] = useState<PricingItem[]>([
-    { id: '1', name: 'Four Seasons Resort Bali', dates: 'Jan 15 - Jan 18', nights: 3, price: 450, currency: 'USD' },
-    { id: '2', name: 'The Ritz-Carlton Ubud', dates: 'Jan 18 - Jan 20', nights: 2, price: 380, currency: 'USD' }
-  ]);
-
-  const [activities, setActivities] = useState<PricingItem[]>([
-    { id: '1', name: 'Ubud Rice Terraces Tour', dates: 'Jan 16', price: 85, currency: 'USD' },
-    { id: '2', name: 'Temple Hopping Experience', dates: 'Jan 17', price: 95, currency: 'USD' },
-    { id: '3', name: 'Cooking Class & Market Visit', dates: 'Jan 19', price: 120, currency: 'USD' }
-  ]);
-
-  const [transportation, setTransportation] = useState<PricingItem[]>([
-    { id: '1', name: 'Airport Transfer (Arrival)', dates: 'Jan 15', price: 35, currency: 'USD' },
-    { id: '2', name: 'Private Driver (3 days)', dates: 'Jan 16 - Jan 18', price: 150, currency: 'USD' },
-    { id: '3', name: 'Airport Transfer (Departure)', dates: 'Jan 20', price: 35, currency: 'USD' }
-  ]);
-
-  const [guides, setGuides] = useState<PricingItem[]>([
-    { id: '1', name: 'Licensed Cultural Guide - Made', dates: 'Jan 16 - Jan 17', price: 80, currency: 'USD' },
-    { id: '2', name: 'Adventure Guide - Kadek', dates: 'Jan 18 - Jan 19', price: 75, currency: 'USD' }
-  ]);
+  const {
+    hotels,
+    activities,
+    transportation,
+    guides,
+    updateItemPrice,
+    updateItemNights,
+    addItem,
+    removeItem
+  } = usePricingItems();
 
   const [profitMargin, setProfitMargin] = useState(20);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -65,153 +39,29 @@ const PricingBreakdown = ({ totalDays, totalParticipants }: PricingBreakdownProp
   const profit = (subtotal * profitMargin) / 100;
   const total = subtotal + profit;
 
-  const updateItemPrice = (category: string, id: string, newPrice: number) => {
-    const updateList = (items: PricingItem[]) =>
-      items.map(item => item.id === id ? { ...item, price: newPrice } : item);
-
-    switch (category) {
-      case 'hotels':
-        setHotels(updateList(hotels));
-        break;
-      case 'activities':
-        setActivities(updateList(activities));
-        break;
-      case 'transportation':
-        setTransportation(updateList(transportation));
-        break;
-      case 'guides':
-        setGuides(updateList(guides));
-        break;
-    }
+  const handleAddItem = (category: string) => {
+    setCurrentCategory(category as any);
+    setIsAddDialogOpen(true);
   };
 
-  const updateItemNights = (id: string, newNights: number) => {
-    setHotels(hotels.map(item => 
-      item.id === id ? { ...item, nights: newNights } : item
-    ));
+  const handleItemChange = (field: string, value: string | number) => {
+    setNewItem(prev => ({ ...prev, [field]: value }));
   };
 
-  const addItem = () => {
+  const handleAddNewItem = () => {
     if (!newItem.name || !newItem.dates || newItem.price <= 0) return;
 
-    const item: PricingItem = {
-      id: Date.now().toString(),
+    const itemToAdd = {
       name: newItem.name,
       dates: newItem.dates,
       price: newItem.price,
-      currency: 'USD',
       ...(currentCategory === 'hotels' && { nights: newItem.nights || 1 })
     };
 
-    switch (currentCategory) {
-      case 'hotels':
-        setHotels([...hotels, item]);
-        break;
-      case 'activities':
-        setActivities([...activities, item]);
-        break;
-      case 'transportation':
-        setTransportation([...transportation, item]);
-        break;
-      case 'guides':
-        setGuides([...guides, item]);
-        break;
-    }
-
+    addItem(currentCategory, itemToAdd);
     setNewItem({ name: '', dates: '', price: 0, nights: 0 });
     setIsAddDialogOpen(false);
-    toast({ title: "Success", description: `${currentCategory.slice(0, -1)} added successfully!` });
   };
-
-  const removeItem = (category: string, id: string) => {
-    switch (category) {
-      case 'hotels':
-        setHotels(hotels.filter(item => item.id !== id));
-        break;
-      case 'activities':
-        setActivities(activities.filter(item => item.id !== id));
-        break;
-      case 'transportation':
-        setTransportation(transportation.filter(item => item.id !== id));
-        break;
-      case 'guides':
-        setGuides(guides.filter(item => item.id !== id));
-        break;
-    }
-  };
-
-  const PricingSection = ({ title, items, category, showNights = false, showPerPerson = false }: {
-    title: string;
-    items: PricingItem[];
-    category: string;
-    showNights?: boolean;
-    showPerPerson?: boolean;
-  }) => (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h4 className="font-medium text-sm">{title}</h4>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            setCurrentCategory(category as any);
-            setIsAddDialogOpen(true);
-          }}
-        >
-          <Plus className="h-3 w-3 mr-1" />
-          Add {title.slice(0, -1)}
-        </Button>
-      </div>
-      <div className="space-y-2">
-        {items.map((item) => (
-          <div key={item.id} className="flex items-center justify-between p-2 border rounded">
-            <div className="flex-1">
-              <div className="font-medium text-sm">{item.name}</div>
-              <div className="text-xs text-gray-500">{item.dates}</div>
-              {showNights && item.nights && (
-                <div className="text-xs text-gray-500 flex items-center gap-2">
-                  <Input
-                    type="number"
-                    value={item.nights}
-                    onChange={(e) => updateItemNights(item.id, Number(e.target.value))}
-                    className="w-16 h-6 text-xs"
-                    min="1"
-                  />
-                  nights
-                </div>
-              )}
-            </div>
-            <div className="text-right flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <span>$</span>
-                <Input
-                  type="number"
-                  value={item.price}
-                  onChange={(e) => updateItemPrice(category, item.id, Number(e.target.value))}
-                  className="w-20 h-8 text-sm font-medium"
-                  min="0"
-                />
-                {showNights && item.nights && (
-                  <span className="text-sm"> × {item.nights} = ${item.price * item.nights}</span>
-                )}
-                {showPerPerson && (
-                  <span className="text-sm"> × {totalParticipants} = ${item.price * totalParticipants}</span>
-                )}
-              </div>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => removeItem(category, item.id)}
-              className="ml-2"
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 
   return (
     <Card>
@@ -224,6 +74,11 @@ const PricingBreakdown = ({ totalDays, totalParticipants }: PricingBreakdownProp
           items={hotels} 
           category="hotels" 
           showNights={true}
+          totalParticipants={totalParticipants}
+          onAddItem={handleAddItem}
+          onUpdatePrice={updateItemPrice}
+          onUpdateNights={updateItemNights}
+          onRemoveItem={removeItem}
         />
         
         <Separator />
@@ -233,6 +88,11 @@ const PricingBreakdown = ({ totalDays, totalParticipants }: PricingBreakdownProp
           items={activities} 
           category="activities" 
           showPerPerson={true}
+          totalParticipants={totalParticipants}
+          onAddItem={handleAddItem}
+          onUpdatePrice={updateItemPrice}
+          onUpdateNights={updateItemNights}
+          onRemoveItem={removeItem}
         />
         
         <Separator />
@@ -241,6 +101,11 @@ const PricingBreakdown = ({ totalDays, totalParticipants }: PricingBreakdownProp
           title="Transportation" 
           items={transportation} 
           category="transportation"
+          totalParticipants={totalParticipants}
+          onAddItem={handleAddItem}
+          onUpdatePrice={updateItemPrice}
+          onUpdateNights={updateItemNights}
+          onRemoveItem={removeItem}
         />
         
         <Separator />
@@ -249,107 +114,35 @@ const PricingBreakdown = ({ totalDays, totalParticipants }: PricingBreakdownProp
           title="Guides" 
           items={guides} 
           category="guides"
+          totalParticipants={totalParticipants}
+          onAddItem={handleAddItem}
+          onUpdatePrice={updateItemPrice}
+          onUpdateNights={updateItemNights}
+          onRemoveItem={removeItem}
         />
 
         <Separator />
 
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="profit-margin">Profit Margin (%)</Label>
-            <Input
-              id="profit-margin"
-              type="number"
-              value={profitMargin}
-              onChange={(e) => setProfitMargin(Number(e.target.value))}
-            />
-          </div>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-sm">Hotels Total:</span>
-              <span className="font-medium">${hotelTotal.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm">Activities Total:</span>
-              <span className="font-medium">${activityTotal.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm">Transportation Total:</span>
-              <span className="font-medium">${transportTotal.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm">Guides Total:</span>
-              <span className="font-medium">${guideTotal.toLocaleString()}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between">
-              <span className="text-sm font-medium">Subtotal:</span>
-              <span className="font-medium">${subtotal.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm font-medium">Profit ({profitMargin}%):</span>
-              <span className="font-medium text-green-600">${profit.toLocaleString()}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total Price:</span>
-              <span className="text-blue-600">${total.toLocaleString()}</span>
-            </div>
-          </div>
-        </div>
+        <PricingSummary
+          profitMargin={profitMargin}
+          onProfitMarginChange={setProfitMargin}
+          hotelTotal={hotelTotal}
+          activityTotal={activityTotal}
+          transportTotal={transportTotal}
+          guideTotal={guideTotal}
+          subtotal={subtotal}
+          profit={profit}
+          total={total}
+        />
 
-        {/* Add Item Dialog */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add {currentCategory.slice(0, -1)}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="item-name">Name</Label>
-                <Input
-                  id="item-name"
-                  value={newItem.name}
-                  onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                  placeholder={`Enter ${currentCategory.slice(0, -1)} name...`}
-                />
-              </div>
-              <div>
-                <Label htmlFor="item-dates">Dates</Label>
-                <Input
-                  id="item-dates"
-                  value={newItem.dates}
-                  onChange={(e) => setNewItem({ ...newItem, dates: e.target.value })}
-                  placeholder="e.g., Jan 15 - Jan 18"
-                />
-              </div>
-              {currentCategory === 'hotels' && (
-                <div>
-                  <Label htmlFor="item-nights">Number of Nights</Label>
-                  <Input
-                    id="item-nights"
-                    type="number"
-                    value={newItem.nights}
-                    onChange={(e) => setNewItem({ ...newItem, nights: Number(e.target.value) })}
-                    placeholder="Number of nights"
-                  />
-                </div>
-              )}
-              <div>
-                <Label htmlFor="item-price">Price (USD)</Label>
-                <Input
-                  id="item-price"
-                  type="number"
-                  value={newItem.price}
-                  onChange={(e) => setNewItem({ ...newItem, price: Number(e.target.value) })}
-                  placeholder="Enter price..."
-                />
-              </div>
-              <Button onClick={addItem} className="w-full">
-                Add {currentCategory.slice(0, -1)}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <AddItemDialog
+          isOpen={isAddDialogOpen}
+          onOpenChange={setIsAddDialogOpen}
+          currentCategory={currentCategory}
+          newItem={newItem}
+          onItemChange={handleItemChange}
+          onAddItem={handleAddNewItem}
+        />
       </CardContent>
     </Card>
   );
