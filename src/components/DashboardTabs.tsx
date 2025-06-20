@@ -1,6 +1,6 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import EmailInbox from "@/components/EmailInbox";
+import NewMessages from "@/components/NewMessages";
 import CustomerList from "@/components/CustomerList";
 import ItineraryManagement from "@/components/ItineraryManagement";
 import BookingManagement from "@/components/BookingManagement";
@@ -22,7 +22,7 @@ const DashboardTabs = ({ defaultValue = "new-messages" }: DashboardTabsProps) =>
       </TabsList>
 
       <TabsContent value="new-messages">
-        <EmailInbox />
+        <NewMessages />
       </TabsContent>
 
       <TabsContent value="customers">
