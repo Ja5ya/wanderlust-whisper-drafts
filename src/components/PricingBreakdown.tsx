@@ -65,6 +65,32 @@ const PricingBreakdown = ({ totalDays, totalParticipants }: PricingBreakdownProp
   const profit = (subtotal * profitMargin) / 100;
   const total = subtotal + profit;
 
+  const updateItemPrice = (category: string, id: string, newPrice: number) => {
+    const updateList = (items: PricingItem[]) =>
+      items.map(item => item.id === id ? { ...item, price: newPrice } : item);
+
+    switch (category) {
+      case 'hotels':
+        setHotels(updateList(hotels));
+        break;
+      case 'activities':
+        setActivities(updateList(activities));
+        break;
+      case 'transportation':
+        setTransportation(updateList(transportation));
+        break;
+      case 'guides':
+        setGuides(updateList(guides));
+        break;
+    }
+  };
+
+  const updateItemNights = (id: string, newNights: number) => {
+    setHotels(hotels.map(item => 
+      item.id === id ? { ...item, nights: newNights } : item
+    ));
+  };
+
   const addItem = () => {
     if (!newItem.name || !newItem.dates || newItem.price <= 0) return;
 
@@ -143,14 +169,34 @@ const PricingBreakdown = ({ totalDays, totalParticipants }: PricingBreakdownProp
               <div className="font-medium text-sm">{item.name}</div>
               <div className="text-xs text-gray-500">{item.dates}</div>
               {showNights && item.nights && (
-                <div className="text-xs text-gray-500">{item.nights} nights</div>
+                <div className="text-xs text-gray-500 flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={item.nights}
+                    onChange={(e) => updateItemNights(item.id, Number(e.target.value))}
+                    className="w-16 h-6 text-xs"
+                    min="1"
+                  />
+                  nights
+                </div>
               )}
             </div>
-            <div className="text-right">
-              <div className="font-medium">
-                ${item.price}
-                {showNights && item.nights && ` × ${item.nights} = $${item.price * item.nights}`}
-                {showPerPerson && ` × ${totalParticipants} = $${item.price * totalParticipants}`}
+            <div className="text-right flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <span>$</span>
+                <Input
+                  type="number"
+                  value={item.price}
+                  onChange={(e) => updateItemPrice(category, item.id, Number(e.target.value))}
+                  className="w-20 h-8 text-sm font-medium"
+                  min="0"
+                />
+                {showNights && item.nights && (
+                  <span className="text-sm"> × {item.nights} = ${item.price * item.nights}</span>
+                )}
+                {showPerPerson && (
+                  <span className="text-sm"> × {totalParticipants} = ${item.price * totalParticipants}</span>
+                )}
               </div>
             </div>
             <Button
