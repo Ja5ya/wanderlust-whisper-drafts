@@ -35,6 +35,18 @@ const EmailInbox = () => {
     }
   }, [selectedEmail]);
 
+  // Auto-add to drafts when AI response is generated
+  useEffect(() => {
+    if (draftResponse && selectedEmail) {
+      // Automatically add to drafts when response is generated
+      console.log("Auto-adding email response to drafts:", {
+        to: selectedEmail.from_email,
+        subject: `Re: ${selectedEmail.subject}`,
+        content: draftResponse
+      });
+    }
+  }, [draftResponse, selectedEmail]);
+
   const connectEmailProvider = (provider: string) => {
     setIsConnected(true);
     toast({
@@ -75,7 +87,7 @@ TravelAssist DMC`;
       
       toast({
         title: "Success",
-        description: "Email draft generated successfully!",
+        description: "Email draft generated and added to drafts automatically!",
         className: "fixed top-4 right-4 z-50"
       });
     }, 2000);
@@ -86,10 +98,12 @@ TravelAssist DMC`;
     generateDraft();
   };
 
-  const acceptDraft = () => {
+  const sendEmail = () => {
+    if (!draftResponse || !selectedEmail) return;
+    
     toast({
-      title: "Draft Accepted",
-      description: "Email moved to your drafts folder for final review and sending.",
+      title: "Email Sent",
+      description: "Your email has been sent successfully!",
       className: "fixed top-4 right-4 z-50"
     });
     setDraftResponse("");
@@ -212,7 +226,7 @@ TravelAssist DMC`;
               <CardContent className="space-y-4">
                 {selectedEmail && (
                   <>
-                    {/* Original Message - Top */}
+                    {/* Original Message */}
                     <div>
                       <Label htmlFor="email-content">Original Message</Label>
                       <Textarea
@@ -224,22 +238,9 @@ TravelAssist DMC`;
                       />
                     </div>
 
-                    {/* AI Generated Response - Below Original */}
+                    {/* AI Generated Response */}
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <Label htmlFor="draft-response">AI Generated Response</Label>
-                        {draftResponse && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={regenerateDraft}
-                            disabled={isGenerating}
-                          >
-                            <RefreshCw className="h-3 w-3 mr-1" />
-                            Regenerate
-                          </Button>
-                        )}
-                      </div>
+                      <Label htmlFor="draft-response">AI Generated Response (Auto-saved to Drafts)</Label>
                       {isGenerating ? (
                         <div className="flex items-center justify-center py-8 text-sm text-gray-500">
                           <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -257,18 +258,30 @@ TravelAssist DMC`;
                       )}
                     </div>
 
-                    {/* Custom Instructions - Below AI Response */}
-                    <div>
-                      <Label htmlFor="custom-prompt">Custom Instructions (Optional)</Label>
-                      <Input
-                        id="custom-prompt"
-                        placeholder="e.g., mention our spring promotion..."
-                        value={customPrompt}
-                        onChange={(e) => setCustomPrompt(e.target.value)}
-                      />
+                    {/* Custom Instructions and Regenerate - Side by Side */}
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Label htmlFor="custom-prompt">Custom Instructions (Optional)</Label>
+                        <Input
+                          id="custom-prompt"
+                          placeholder="e.g., mention our spring promotion..."
+                          value={customPrompt}
+                          onChange={(e) => setCustomPrompt(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex items-end">
+                        <Button
+                          variant="outline"
+                          onClick={regenerateDraft}
+                          disabled={isGenerating}
+                        >
+                          <RefreshCw className="h-4 w-4 mr-1" />
+                          Regenerate
+                        </Button>
+                      </div>
                     </div>
 
-                    {/* Voice Notes - Bottom */}
+                    {/* Voice Notes */}
                     <div>
                       <Label htmlFor="voice-notes">Voice Notes & Transcription</Label>
                       <Textarea
@@ -294,9 +307,9 @@ TravelAssist DMC`;
                     {/* Action Buttons */}
                     {draftResponse && (
                       <div className="flex gap-2 pt-4 border-t">
-                        <Button onClick={acceptDraft} className="flex-1">
-                          <Check className="h-4 w-4 mr-2" />
-                          Accept & Move to Drafts
+                        <Button onClick={sendEmail} className="flex-1">
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Email
                         </Button>
                         <Dialog>
                           <DialogTrigger asChild>
