@@ -12,6 +12,9 @@ export interface EmailMessage {
   is_draft: boolean;
   is_sent: boolean;
   timestamp: string;
+  booking_id?: string;
+  itinerary_id?: string;
+  trip_reference?: string;
   customer?: {
     name: string;
     email: string;
@@ -36,6 +39,9 @@ export const useEmailMessages = () => {
             is_draft,
             is_sent,
             timestamp,
+            booking_id,
+            itinerary_id,
+            trip_reference,
             customers!email_messages_customer_id_fkey (
               name,
               email

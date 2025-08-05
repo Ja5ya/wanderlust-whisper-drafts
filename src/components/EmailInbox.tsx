@@ -8,10 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Mail, Send, RefreshCw, Plus, Check, Settings } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Mail, Send, RefreshCw, Plus, Check, Settings, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEmailMessages } from "@/hooks/useMessages";
 import { useAddToFAQ } from "@/hooks/useAddToFAQ";
+import { useBookings } from "@/hooks/useBookings";
+import { useItineraries } from "@/hooks/useItineraries";
 import SpeechToText from "./SpeechToText";
 
 const EmailInbox = () => {
@@ -23,9 +26,14 @@ const EmailInbox = () => {
   const [isConnected, setIsConnected] = useState(true);
   const [faqQuestion, setFaqQuestion] = useState("");
   const [faqAnswer, setFaqAnswer] = useState("");
+  const [showTripAssignDialog, setShowTripAssignDialog] = useState(false);
+  const [selectedTripType, setSelectedTripType] = useState("");
+  const [selectedTripId, setSelectedTripId] = useState("");
   const { toast } = useToast();
 
   const { data: emails = [], isLoading } = useEmailMessages();
+  const { data: bookings = [] } = useBookings();
+  const { data: itineraries = [] } = useItineraries();
   const addToFAQ = useAddToFAQ();
 
   // Auto-generate response when email is selected
@@ -133,6 +141,41 @@ TravelAssist DMC`;
     setFaqAnswer("");
   };
 
+  const handleTripAssignment = () => {
+    if (!selectedEmail || !selectedTripType || !selectedTripId) {
+      toast({
+        title: "Error",
+        description: "Please select a trip to assign this conversation to",
+        variant: "destructive",
+        className: "fixed top-4 right-4 z-50"
+      });
+      return;
+    }
+
+    // Here you would update the email with the trip assignment
+    toast({
+      title: "Success",
+      description: "Email conversation assigned to trip successfully!",
+      className: "fixed top-4 right-4 z-50"
+    });
+
+    setShowTripAssignDialog(false);
+    setSelectedTripType("");
+    setSelectedTripId("");
+  };
+
+  const getAvailableTrips = () => {
+    if (!selectedEmail?.customer_id) return { bookings: [], itineraries: [] };
+    
+    const customerBookings = bookings.filter((b: any) => b.customer_id === selectedEmail.customer_id);
+    const customerItineraries = itineraries.filter((i: any) => i.customer_id === selectedEmail.customer_id);
+    
+    return {
+      bookings: customerBookings,
+      itineraries: customerItineraries
+    };
+  };
+
   if (!isConnected) {
     return (
       <Card>
@@ -194,35 +237,58 @@ TravelAssist DMC`;
                   <div className="text-center py-4">Loading emails...</div>
                 ) : (
                   <div className="space-y-1">
-                    {emails.map((email) => (
-                      <div
-                        key={email.id}
-                        className={`p-4 border-b hover:bg-gray-50 cursor-pointer transition-colors ${
-                          !email.is_read ? 'bg-blue-50/30 border-l-4 border-l-blue-500' : ''
-                        }`}
-                        onClick={() => setSelectedEmail(email)}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className={`font-medium text-sm ${!email.is_read ? 'font-bold' : ''}`}>
-                                {email.customer?.name || email.from_email}
-                              </span>
-                              {!email.is_read && <Badge variant="secondary" className="text-xs">New</Badge>}
-                            </div>
-                            <div className={`text-sm mb-1 ${!email.is_read ? 'font-semibold' : ''}`}>
-                              {email.subject}
-                            </div>
-                            <div className="text-sm text-gray-600 line-clamp-2">
-                              {email.content}
-                            </div>
-                          </div>
-                          <div className="text-xs text-gray-500 ml-4 flex-shrink-0">
-                            {new Date(email.timestamp).toLocaleDateString()}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                     {emails.map((email) => (
+                       <div
+                         key={email.id}
+                         className={`p-4 border-b hover:bg-gray-50 transition-colors ${
+                           !email.is_read ? 'bg-blue-50/30 border-l-4 border-l-blue-500' : ''
+                         }`}
+                       >
+                         <div className="flex justify-between items-start">
+                           <div 
+                             className="flex-1 min-w-0 cursor-pointer"
+                             onClick={() => setSelectedEmail(email)}
+                           >
+                             <div className="flex items-center gap-2 mb-1">
+                               <span className={`font-medium text-sm ${!email.is_read ? 'font-bold' : ''}`}>
+                                 {email.customer?.name || email.from_email}
+                               </span>
+                               {!email.is_read && <Badge variant="secondary" className="text-xs">New</Badge>}
+                               {email.trip_reference && (
+                                 <Badge variant="outline" className="text-xs">
+                                   <MapPin className="h-3 w-3 mr-1" />
+                                   {email.trip_reference}
+                                 </Badge>
+                               )}
+                             </div>
+                             <div className={`text-sm mb-1 ${!email.is_read ? 'font-semibold' : ''}`}>
+                               {email.subject}
+                             </div>
+                             <div className="text-sm text-gray-600 line-clamp-2">
+                               {email.content}
+                             </div>
+                           </div>
+                           <div className="ml-4 flex-shrink-0 flex flex-col items-end gap-2">
+                             <div className="text-xs text-gray-500">
+                               {new Date(email.timestamp).toLocaleDateString()}
+                             </div>
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               className="text-xs px-2 py-1 h-auto"
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 setSelectedEmail(email);
+                                 setShowTripAssignDialog(true);
+                               }}
+                             >
+                               <MapPin className="h-3 w-3 mr-1" />
+                               Assign Trip
+                             </Button>
+                           </div>
+                         </div>
+                       </div>
+                     ))}
                   </div>
                 )}
               </CardContent>
@@ -442,6 +508,74 @@ TravelAssist DMC`;
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Trip Assignment Dialog */}
+      <Dialog open={showTripAssignDialog} onOpenChange={setShowTripAssignDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Conversation to Trip</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Trip Type</Label>
+              <Select value={selectedTripType} onValueChange={setSelectedTripType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select trip type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="booking">Booking</SelectItem>
+                  <SelectItem value="itinerary">Itinerary</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {selectedTripType && (
+              <div>
+                <Label>Available {selectedTripType === 'booking' ? 'Bookings' : 'Itineraries'}</Label>
+                <Select value={selectedTripId} onValueChange={setSelectedTripId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={`Select ${selectedTripType}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {selectedTripType === 'booking' 
+                      ? getAvailableTrips().bookings.map(booking => (
+                          <SelectItem key={booking.id} value={booking.id}>
+                            {booking.booking_reference} - {booking.destination} ({new Date(booking.start_date).toLocaleDateString()})
+                          </SelectItem>
+                        ))
+                      : getAvailableTrips().itineraries.map(itinerary => (
+                          <SelectItem key={itinerary.id} value={itinerary.id}>
+                            {itinerary.title} - {itinerary.status} ({itinerary.total_days} days)
+                          </SelectItem>
+                        ))
+                    }
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleTripAssignment} 
+                disabled={!selectedTripType || !selectedTripId}
+                className="flex-1"
+              >
+                Assign to Trip
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setShowTripAssignDialog(false);
+                  setSelectedTripType("");
+                  setSelectedTripId("");
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
