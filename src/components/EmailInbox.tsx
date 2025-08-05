@@ -178,8 +178,8 @@ TravelAssist DMC`;
         </TabsList>
 
         <TabsContent value="inbox">
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Email List */}
+          {!selectedEmail ? (
+            /* Gmail-style Email List View */
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -193,51 +193,106 @@ TravelAssist DMC`;
                 {isLoading ? (
                   <div className="text-center py-4">Loading emails...</div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {emails.map((email) => (
                       <div
                         key={email.id}
-                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                          selectedEmail?.id === email.id ? 'bg-primary/10 border-primary' : 'hover:bg-gray-50'
-                        } ${!email.is_read ? 'border-l-4 border-l-blue-500' : ''}`}
+                        className={`p-4 border-b hover:bg-gray-50 cursor-pointer transition-colors ${
+                          !email.is_read ? 'bg-blue-50/30 border-l-4 border-l-blue-500' : ''
+                        }`}
                         onClick={() => setSelectedEmail(email)}
                       >
-                        <div className="flex justify-between items-start mb-1">
-                          <span className="font-medium text-sm">{email.customer?.name || email.from_email}</span>
-                          <span className="text-xs text-gray-500">{new Date(email.timestamp).toLocaleString()}</span>
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className={`font-medium text-sm ${!email.is_read ? 'font-bold' : ''}`}>
+                                {email.customer?.name || email.from_email}
+                              </span>
+                              {!email.is_read && <Badge variant="secondary" className="text-xs">New</Badge>}
+                            </div>
+                            <div className={`text-sm mb-1 ${!email.is_read ? 'font-semibold' : ''}`}>
+                              {email.subject}
+                            </div>
+                            <div className="text-sm text-gray-600 line-clamp-2">
+                              {email.content}
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500 ml-4 flex-shrink-0">
+                            {new Date(email.timestamp).toLocaleDateString()}
+                          </div>
                         </div>
-                        <div className="text-sm font-medium mb-1">{email.subject}</div>
-                        <div className="text-xs text-gray-600 line-clamp-2">{email.content}</div>
                       </div>
                     ))}
                   </div>
                 )}
               </CardContent>
             </Card>
+          ) : (
+            /* Gmail-style Email Detail View with AI Assistant */
+            <div className="space-y-6">
+              {/* Back to Inbox Button */}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setSelectedEmail(null);
+                  setDraftResponse("");
+                  setCustomPrompt("");
+                  setVoiceNotes("");
+                }}
+              >
+                ← Back to Inbox
+              </Button>
 
-            {/* AI Draft Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>AI Email Assistant</CardTitle>
-                <CardDescription>
-                  {selectedEmail ? `Responding to: ${selectedEmail.subject}` : 'Select an email to generate a response'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {selectedEmail && (
-                  <>
-                    {/* Original Message */}
-                    <div>
-                      <Label htmlFor="email-content">Original Message</Label>
-                      <Textarea
-                        id="email-content"
-                        value={selectedEmail.content}
-                        readOnly
-                        rows={4}
-                        className="bg-gray-50"
-                      />
+              {/* Trip Context Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Trip Context</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Trip ID or reference (e.g., TRIP-2024-001)"
+                      className="flex-1"
+                    />
+                    <Button variant="outline" size="sm">
+                      Load Trip
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Loading trip context helps AI provide more relevant responses about ongoing bookings
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Email Detail with AI Assistant */}
+              <div className="grid lg:grid-cols-2 gap-6">
+                {/* Email Detail */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{selectedEmail.subject}</CardTitle>
+                    <CardDescription>
+                      From: {selectedEmail.customer?.name || selectedEmail.from_email} • {new Date(selectedEmail.timestamp).toLocaleString()}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <div className="whitespace-pre-wrap text-sm">
+                        {selectedEmail.content}
+                      </div>
                     </div>
+                  </CardContent>
+                </Card>
 
+                {/* AI Assistant */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>AI Email Assistant</CardTitle>
+                    <CardDescription>
+                      Generate and customize your response
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                     {/* AI Generated Response */}
                     <div>
                       <Label htmlFor="draft-response">AI Generated Response (Auto-saved to Drafts)</Label>
@@ -251,7 +306,7 @@ TravelAssist DMC`;
                           id="draft-response"
                           value={draftResponse}
                           onChange={(e) => setDraftResponse(e.target.value)}
-                          rows={12}
+                          rows={8}
                           className="border-green-200 bg-green-50/30"
                           placeholder="AI response will appear here automatically..."
                         />
@@ -354,11 +409,11 @@ TravelAssist DMC`;
                         </Dialog>
                       </div>
                     )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="sent">
